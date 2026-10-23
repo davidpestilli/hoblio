@@ -5,7 +5,8 @@ export type ActionKind =
   | { type: "no_op" }
   | { type: "browser_navigate"; url: string; wait_ms?: number }
   | { type: "file_write"; path: string; content: string }
-  | { type: "http_get"; url: string };
+  | { type: "http_get"; url: string }
+  | { type: "show_message"; title: string; text: string; timeout_seconds?: number };
 
 export interface FlowNode {
   id: string;
@@ -68,6 +69,8 @@ export function actionLabel(action: ActionKind): string {
       return "FileWrite";
     case "http_get":
       return "HttpGet";
+    case "show_message":
+      return "ShowMessage";
   }
 }
 
@@ -83,5 +86,12 @@ export function defaultAction(type: ActionKind["type"]): ActionKind {
       return { type: "file_write", path: "output.txt", content: "Hello from Hoblio" };
     case "http_get":
       return { type: "http_get", url: "https://example.com" };
+    case "show_message":
+      return {
+        type: "show_message",
+        title: "Hoblio",
+        text: "Mensagem de exemplo",
+        timeout_seconds: 2,
+      };
   }
 }

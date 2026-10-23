@@ -30,13 +30,8 @@ import {
   type FlowProject,
 } from "./model";
 import { PropertiesPanel } from "./PropertiesPanel";
-
-type RunEvent =
-  | { kind: "run_started"; project: string }
-  | { kind: "node_enter"; node_id: string }
-  | { kind: "node_exit"; node_id: string }
-  | { kind: "action_executed"; node_id: string; summary: string }
-  | { kind: "run_finished"; last_node: string };
+import { RunLogPanel } from "./RunLogPanel";
+import { logLineFromEvent, type LogLine, type RunEvent } from "./runLog";
 
 const nodeTypes = { hoblio: HoblioNode };
 
@@ -44,7 +39,8 @@ export default function App() {
   const [project, setProject] = useState<FlowProject>(defaultProject);
   const [projectDir, setProjectDir] = useState<string | null>(null);
   const [status, setStatus] = useState("Ready");
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logLines, setLogLines] = useState<LogLine[]>([]);
+  const [showLogJson, setShowLogJson] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
 
@@ -75,16 +71,28 @@ export default function App() {
   }, [activeNodeId, setNodes]);
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
-    listen<RunEvent>("hoblio-run-event", (ev) => {
-      const e = ev.payload;
-      if (e.kind === "node_enter") setActiveNodeId(e.node_id);
-      if (e.kind === "run_finished") setActiveNodeId(null);
-      setLogs((prev) => [...prev, JSON.stringify(e)]);
-    }).then((fn) => {
-      unlisten = fn;
-    });
-    return () => unlisten?.();
+
+    void (async () => {
+      const fn = await listen<RunEvent>("hoblio-run-event", (ev) => {
+        if (cancelled) return;
+        const e = ev.payload;
+        if (e.kind === "node_enter") setActiveNodeId(e.node_id);
+        if (e.kind === "run_finished") setActiveNodeId(null);
+        setLogLines((prev) => [...prev, logLineFromEvent(e)]);
+      });
+      if (cancelled) {
+        fn();
+      } else {
+        unlisten = fn;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
   }, []);
 
   const selectedNode: FlowNode | null = useMemo(() => {
@@ -104,7 +112,7 @@ export default function App() {
     const loaded = await invoke<FlowProject>("load_project_cmd", { path: dir });
     setProjectDir(dir);
     loadCanvas(loaded);
-    setLogs([]);
+    setLogLines([]);
     setStatus(`Opened ${dir}`);
   };
 
@@ -131,7 +139,7 @@ export default function App() {
   const runFlow = async () => {
     if (running) return;
     setRunning(true);
-    setLogs([]);
+    setLogLines([]);
     setStatus("Running…");
     try {
       const current = syncProjectFromCanvas();
@@ -207,6 +215,9 @@ export default function App() {
           <button type="button" onClick={() => addAction("browser_navigate")}>
             BrowserNavigate
           </button>
+          <button type="button" onClick={() => addAction("show_message")}>
+            ShowMessage
+          </button>
         </aside>
         <div className="canvas">
           <ReactFlow
@@ -226,10 +237,11 @@ export default function App() {
         </div>
         <PropertiesPanel node={selectedNode} onChange={updateSelectedNode} />
       </div>
-      <footer className="log-panel">
-        <h3>Run log</h3>
-        <pre>{logs.join("\n")}</pre>
-      </footer>
+      <RunLogPanel
+        lines={logLines}
+        showJson={showLogJson}
+        onToggleJson={() => setShowLogJson((v) => !v)}
+      />
     </div>
   );
 }

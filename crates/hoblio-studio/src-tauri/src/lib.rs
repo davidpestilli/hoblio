@@ -38,6 +38,7 @@ async fn run_flow_cmd(app: tauri::AppHandle, project: FlowProject) -> Result<Str
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
             load_project_cmd,
             save_project_cmd,

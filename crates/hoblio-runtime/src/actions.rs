@@ -5,6 +5,8 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use hoblio_model::ActionKind;
 
+use crate::show_message::spawn_show_message;
+
 pub fn execute_action(action: &ActionKind) -> Result<String> {
     match action {
         ActionKind::Log(log) => {
@@ -15,7 +17,24 @@ pub fn execute_action(action: &ActionKind) -> Result<String> {
         ActionKind::FileWrite { path, content } => file_write(path, content),
         ActionKind::HttpGet { url } => http_get(url),
         ActionKind::BrowserNavigate { url, wait_ms } => browser_navigate(url, *wait_ms),
+        ActionKind::ShowMessage {
+            title,
+            text,
+            timeout_seconds,
+        } => show_message(title, text, *timeout_seconds),
     }
+}
+
+fn show_message(title: &str, text: &str, timeout_seconds: Option<f64>) -> Result<String> {
+    spawn_show_message(title, text, timeout_seconds)?;
+    let timeout_note = match timeout_seconds.filter(|&s| s > 0.0) {
+        Some(s) => format!("timeout={s}s"),
+        None => "until closed".into(),
+    };
+    Ok(format!(
+        "show_message: {:?} ({timeout_note})",
+        title
+    ))
 }
 
 fn file_write(path: &str, content: &str) -> Result<String> {

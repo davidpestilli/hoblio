@@ -56,6 +56,7 @@ export function PropertiesPanel({ node, onChange }: Props) {
               <option value="file_write">FileWrite</option>
               <option value="http_get">HttpGet</option>
               <option value="browser_navigate">BrowserNavigate</option>
+              <option value="show_message">ShowMessage</option>
             </select>
           </label>
           <p className="hint">Current: {actionLabel(node.action)}</p>
@@ -103,6 +104,63 @@ export function PropertiesPanel({ node, onChange }: Props) {
                 onChange={(e) => patchAction({ type: "http_get", url: e.target.value })}
               />
             </label>
+          )}
+
+          {node.action.type === "show_message" && (
+            <>
+              <label>
+                Title
+                <input
+                  value={node.action.title}
+                  onChange={(e) =>
+                    patchAction({
+                      type: "show_message",
+                      title: e.target.value,
+                      text: node.action!.type === "show_message" ? node.action.text : "",
+                      timeout_seconds:
+                        node.action!.type === "show_message"
+                          ? node.action.timeout_seconds
+                          : undefined,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Text
+                <textarea
+                  rows={4}
+                  value={node.action.text}
+                  onChange={(e) =>
+                    patchAction({
+                      type: "show_message",
+                      text: e.target.value,
+                      title: node.action!.type === "show_message" ? node.action.title : "",
+                      timeout_seconds:
+                        node.action!.type === "show_message"
+                          ? node.action.timeout_seconds
+                          : undefined,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Timeout (seconds, empty = until Fechar)
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={node.action.timeout_seconds ?? ""}
+                  onChange={(e) =>
+                    patchAction({
+                      type: "show_message",
+                      title: node.action!.type === "show_message" ? node.action.title : "",
+                      text: node.action!.type === "show_message" ? node.action.text : "",
+                      timeout_seconds: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
+                />
+              </label>
+            </>
           )}
 
           {node.action.type === "browser_navigate" && (

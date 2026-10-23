@@ -1,0 +1,45 @@
+{
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "Start",
+      "ui": { "x": 0, "y": 0 }
+    },
+    {
+      "id": "log_intro",
+      "kind": "action",
+      "label": "Log intro",
+      "action": {
+        "type": "log",
+        "message": "Abrindo janela de demo (fecha em 2s)…"
+      },
+      "ui": { "x": 200, "y": 0 }
+    },
+    {
+      "id": "msg_demo",
+      "kind": "action",
+      "label": "Mensagem",
+      "action": {
+        "type": "show_message",
+        "title": "Hoblio Demo",
+        "text": "Olá! Esta janela fecha automaticamente em 2 segundos.",
+        "timeout_seconds": 2
+      },
+      "ui": { "x": 400, "y": 0 }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "End",
+      "ui": { "x": 600, "y": 0 }
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "log_intro" },
+    { "from": "log_intro", "to": "msg_demo" },
+    { "from": "msg_demo", "to": "end" }
+  ],
+  "variables": {}
+}
