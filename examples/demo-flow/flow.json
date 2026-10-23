@@ -1,0 +1,45 @@
+{
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "Start",
+      "ui": { "x": 0, "y": 0 }
+    },
+    {
+      "id": "log_hello",
+      "kind": "action",
+      "label": "Say hello",
+      "action": {
+        "type": "log",
+        "message": "Hello from Hoblio (demo-flow)"
+      },
+      "ui": { "x": 200, "y": 0 }
+    },
+    {
+      "id": "log_step",
+      "kind": "action",
+      "label": "Second log",
+      "action": {
+        "type": "log",
+        "message": "Second step executed"
+      },
+      "ui": { "x": 400, "y": 0 }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "End",
+      "ui": { "x": 600, "y": 0 }
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "log_hello" },
+    { "from": "log_hello", "to": "log_step" },
+    { "from": "log_step", "to": "end" }
+  ],
+  "variables": {
+    "greeting": "Hoblio"
+  }
+}

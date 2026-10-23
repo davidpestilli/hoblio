@@ -1,0 +1,15 @@
+[package]
+name = "hoblio-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "hoblio"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true }
+hoblio-log = { path = "../hoblio-log" }
+hoblio-runtime = { path = "../hoblio-runtime" }
+hoblio-serde = { path = "../hoblio-serde" }

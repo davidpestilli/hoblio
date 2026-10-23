@@ -1,0 +1,12 @@
+[package]
+name = "hoblio-runtime"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+hoblio-log = { path = "../hoblio-log" }
+hoblio-model = { path = "../hoblio-model" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

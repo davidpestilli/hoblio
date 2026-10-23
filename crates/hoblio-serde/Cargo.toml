@@ -1,0 +1,10 @@
+[package]
+name = "hoblio-serde"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+hoblio-model = { path = "../hoblio-model" }
+serde = { workspace = true }
+serde_json = { workspace = true }
