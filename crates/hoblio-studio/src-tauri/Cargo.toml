@@ -1,0 +1,28 @@
+[package]
+name = "hoblio-studio"
+version.workspace = true
+edition.workspace = true
+description = "Hoblio flowchart studio (Tauri 2)"
+
+[lib]
+name = "hoblio_studio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+anyhow = { workspace = true }
+hoblio-log = { path = "../../hoblio-log" }
+hoblio-model = { path = "../../hoblio-model" }
+hoblio-runtime = { path = "../../hoblio-runtime" }
+hoblio-serde = { path = "../../hoblio-serde" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tauri = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

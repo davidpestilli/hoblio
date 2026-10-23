@@ -1,0 +1,5 @@
+{
+  "name": "web-demo-flow",
+  "version": "0.1.0",
+  "description": "MVP slice 1: HTTP GET, file write, optional browser navigate"
+}

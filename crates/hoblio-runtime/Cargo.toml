@@ -10,3 +10,7 @@ hoblio-model = { path = "../hoblio-model" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+chromiumoxide = { workspace = true }
+futures = { workspace = true }

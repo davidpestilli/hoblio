@@ -6,8 +6,13 @@ use serde::{Deserialize, Serialize};
 pub enum ActionKind {
     Log(LogAction),
     NoOp,
-    /// Placeholder — browser navigation (MVP).
-    BrowserNavigate { url: String },
+    /// Open a URL in Chromium via CDP (MVP).
+    BrowserNavigate {
+        url: String,
+        /// Optional pause after navigation (milliseconds).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_ms: Option<u64>,
+    },
     /// Placeholder — write text to a file (MVP).
     FileWrite { path: String, content: String },
     /// Placeholder — HTTP GET (MVP).

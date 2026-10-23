@@ -2,16 +2,28 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Result, bail};
 use hoblio_log::runtime_event;
-use hoblio_model::{ActionKind, FlowProject, NodeKind, validate_graph};
+use hoblio_model::{FlowProject, NodeKind, validate_graph};
 
+use crate::actions::execute_action;
 use crate::events::{RunEvent, RunOutcome};
 
 pub fn run_project(project: &FlowProject) -> Result<RunOutcome> {
+    run_project_with_listener(project, |_| {})
+}
+
+pub fn run_project_with_listener<F>(project: &FlowProject, mut on_event: F) -> Result<RunOutcome>
+where
+    F: FnMut(RunEvent),
+{
     validate_graph(&project.flow).map_err(|e| anyhow::anyhow!(e))?;
 
     let mut events = vec![RunEvent::RunStarted {
         project: project.manifest.name.clone(),
     }];
+    let started = RunEvent::RunStarted {
+        project: project.manifest.name.clone(),
+    };
+    on_event(started);
     runtime_event("run_started", "", &project.manifest.name);
 
     let nodes: HashMap<_, _> = project
@@ -25,7 +37,7 @@ pub fn run_project(project: &FlowProject) -> Result<RunOutcome> {
     for edge in &project.flow.edges {
         if next_by_from.insert(edge.from.as_str(), edge.to.as_str()).is_some() {
             bail!(
-                "node `{}` has multiple outgoing edges; Phase 0 expects a linear chain",
+                "node `{}` has multiple outgoing edges; MVP expects a linear chain",
                 edge.from
             );
         }
@@ -37,20 +49,26 @@ pub fn run_project(project: &FlowProject) -> Result<RunOutcome> {
             .get(current)
             .with_context(|| format!("node `{current}` missing"))?;
 
-        events.push(RunEvent::NodeEnter {
+        let enter = RunEvent::NodeEnter {
             node_id: node.id.clone(),
-        });
+        };
+        events.push(enter.clone());
+        on_event(enter);
         runtime_event("node_enter", &node.id, node.label.as_deref().unwrap_or(""));
 
         match node.kind {
             NodeKind::Start => {}
             NodeKind::End => {
-                events.push(RunEvent::NodeExit {
+                let exit = RunEvent::NodeExit {
                     node_id: node.id.clone(),
-                });
-                events.push(RunEvent::RunFinished {
+                };
+                events.push(exit.clone());
+                on_event(exit);
+                let finished = RunEvent::RunFinished {
                     last_node: node.id.clone(),
-                });
+                };
+                events.push(finished.clone());
+                on_event(finished);
                 runtime_event("run_finished", &node.id, "end");
                 return Ok(RunOutcome {
                     events,
@@ -63,38 +81,25 @@ pub fn run_project(project: &FlowProject) -> Result<RunOutcome> {
                     .as_ref()
                     .context("action node without action")?;
                 let summary = execute_action(action)?;
-                events.push(RunEvent::ActionExecuted {
+                let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary,
-                });
+                };
+                events.push(executed.clone());
+                on_event(executed);
             }
         }
 
-        events.push(RunEvent::NodeExit {
+        let exit = RunEvent::NodeExit {
             node_id: node.id.clone(),
-        });
+        };
+        events.push(exit.clone());
+        on_event(exit);
 
         match next_by_from.get(current) {
             Some(next) => current = next,
             None if node.kind == NodeKind::End => unreachable!(),
             None => bail!("node `{}` has no outgoing edge", node.id),
         }
-    }
-}
-
-fn execute_action(action: &ActionKind) -> Result<String> {
-    match action {
-        ActionKind::Log(log) => {
-            println!("{}", log.message);
-            Ok(format!("log: {}", log.message))
-        }
-        ActionKind::NoOp => Ok("noop".into()),
-        ActionKind::BrowserNavigate { url } => {
-            bail!("BrowserNavigate not implemented in Phase 0 (url={url})")
-        }
-        ActionKind::FileWrite { path, .. } => {
-            bail!("FileWrite not implemented in Phase 0 (path={path})")
-        }
-        ActionKind::HttpGet { url } => bail!("HttpGet not implemented in Phase 0 (url={url})"),
     }
 }

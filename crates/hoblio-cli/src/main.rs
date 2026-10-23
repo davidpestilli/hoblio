@@ -7,7 +7,7 @@ use hoblio_runtime::run;
 use hoblio_serde::{load_project, validate_project_dir};
 
 #[derive(Parser)]
-#[command(name = "hoblio", about = "Hoblio flow runner (Phase 0)")]
+#[command(name = "hoblio", about = "Hoblio flow runner")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

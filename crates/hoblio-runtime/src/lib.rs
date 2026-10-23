@@ -1,10 +1,11 @@
-//! Walk the flow graph from `start` and execute stub actions (Phase 0).
+//! Walk the flow graph from `start` and execute flow actions.
 
+mod actions;
 mod events;
 mod exec;
 
 pub use events::{RunEvent, RunOutcome};
-pub use exec::run_project;
+pub use exec::{run_project, run_project_with_listener};
 
 use hoblio_model::FlowProject;
 

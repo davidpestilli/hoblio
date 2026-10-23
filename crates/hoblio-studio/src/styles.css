@@ -1,0 +1,157 @@
+:root {
+  font-family: system-ui, Segoe UI, sans-serif;
+  color: #1a1a1a;
+  background: #f4f5f7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body,
+#root {
+  margin: 0;
+  height: 100vh;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #111827;
+  color: #f9fafb;
+}
+
+.toolbar button {
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+
+.toolbar .status {
+  margin-left: auto;
+  opacity: 0.9;
+  font-size: 0.9rem;
+}
+
+.toolbar .path {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 160px 1fr 280px;
+  min-height: 0;
+}
+
+.panel {
+  padding: 0.75rem;
+  background: #fff;
+  border-right: 1px solid #e5e7eb;
+  overflow: auto;
+}
+
+.panel h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.palette button {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.4rem;
+  text-align: left;
+}
+
+.properties label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.properties input,
+.properties textarea,
+.properties select {
+  font: inherit;
+  padding: 0.35rem;
+}
+
+.properties .hint {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.canvas {
+  min-height: 0;
+  background: #eef1f6;
+}
+
+.log-panel {
+  height: 140px;
+  border-top: 1px solid #e5e7eb;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  overflow: auto;
+}
+
+.log-panel h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+}
+
+.log-panel pre {
+  margin: 0;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.hoblio-node {
+  min-width: 140px;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 2px solid #94a3b8;
+  background: #fff;
+  font-size: 0.85rem;
+}
+
+.hoblio-node.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px #93c5fd;
+}
+
+.hoblio-node.active {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px #86efac;
+}
+
+.hoblio-node.kind-start {
+  border-color: #059669;
+}
+
+.hoblio-node.kind-end {
+  border-color: #dc2626;
+}
+
+.hoblio-node-title {
+  font-weight: 600;
+}
+
+.hoblio-node-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+}

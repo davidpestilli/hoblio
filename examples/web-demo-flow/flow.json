@@ -1,0 +1,54 @@
+{
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "Start",
+      "ui": { "x": 0, "y": 0 }
+    },
+    {
+      "id": "fetch_example",
+      "kind": "action",
+      "label": "GET example.com",
+      "action": {
+        "type": "http_get",
+        "url": "https://example.com"
+      },
+      "ui": { "x": 200, "y": 0 }
+    },
+    {
+      "id": "write_file",
+      "kind": "action",
+      "label": "Write response note",
+      "action": {
+        "type": "file_write",
+        "path": "examples/web-demo-flow/output/example-fetch.txt",
+        "content": "Fetched https://example.com via Hoblio web-demo-flow"
+      },
+      "ui": { "x": 400, "y": 0 }
+    },
+    {
+      "id": "log_done",
+      "kind": "action",
+      "label": "Log done",
+      "action": {
+        "type": "log",
+        "message": "web-demo-flow finished (browser step optional in studio)"
+      },
+      "ui": { "x": 600, "y": 0 }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "End",
+      "ui": { "x": 800, "y": 0 }
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "fetch_example" },
+    { "from": "fetch_example", "to": "write_file" },
+    { "from": "write_file", "to": "log_done" },
+    { "from": "log_done", "to": "end" }
+  ]
+}
