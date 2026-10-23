@@ -1,6 +1,7 @@
 //! Walk the flow graph from `start` and execute flow actions.
 
 mod actions;
+mod browser;
 mod events;
 mod exec;
 mod show_message;

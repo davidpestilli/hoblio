@@ -4,6 +4,10 @@ export type ActionKind =
   | { type: "log"; message: string }
   | { type: "no_op" }
   | { type: "browser_navigate"; url: string; wait_ms?: number }
+  | { type: "browser_click"; selector: string; timeout_ms?: number }
+  | { type: "browser_fill"; selector: string; text: string; timeout_ms?: number }
+  | { type: "browser_wait_for"; selector: string; timeout_ms?: number }
+  | { type: "browser_get_text"; selector: string; timeout_ms?: number; variable?: string }
   | { type: "file_write"; path: string; content: string }
   | { type: "http_get"; url: string }
   | { type: "show_message"; title: string; text: string; timeout_seconds?: number };
@@ -64,7 +68,15 @@ export function actionLabel(action: ActionKind): string {
     case "no_op":
       return "NoOp";
     case "browser_navigate":
-      return "Browser";
+      return "BrowserNavigate";
+    case "browser_click":
+      return "BrowserClick";
+    case "browser_fill":
+      return "BrowserFill";
+    case "browser_wait_for":
+      return "BrowserWaitFor";
+    case "browser_get_text":
+      return "BrowserGetText";
     case "file_write":
       return "FileWrite";
     case "http_get":
@@ -82,6 +94,14 @@ export function defaultAction(type: ActionKind["type"]): ActionKind {
       return { type: "no_op" };
     case "browser_navigate":
       return { type: "browser_navigate", url: "https://example.com", wait_ms: 500 };
+    case "browser_click":
+      return { type: "browser_click", selector: "button", timeout_ms: 10000 };
+    case "browser_fill":
+      return { type: "browser_fill", selector: "input", text: "", timeout_ms: 10000 };
+    case "browser_wait_for":
+      return { type: "browser_wait_for", selector: "h1", timeout_ms: 10000 };
+    case "browser_get_text":
+      return { type: "browser_get_text", selector: "h1", timeout_ms: 10000 };
     case "file_write":
       return { type: "file_write", path: "output.txt", content: "Hello from Hoblio" };
     case "http_get":
@@ -93,5 +113,39 @@ export function defaultAction(type: ActionKind["type"]): ActionKind {
         text: "Mensagem de exemplo",
         timeout_seconds: 2,
       };
+  }
+}
+
+/** Shared fields for browser DOM actions (not navigate). */
+export function patchBrowserDomAction(
+  current: ActionKind,
+  patch: { selector?: string; timeout_ms?: number; text?: string; variable?: string },
+  type: ActionKind["type"]
+): ActionKind {
+  const timeout_ms = patch.timeout_ms;
+  const selector = patch.selector ?? "h1";
+  switch (type) {
+    case "browser_click":
+      return { type: "browser_click", selector, timeout_ms };
+    case "browser_fill":
+      return {
+        type: "browser_fill",
+        selector,
+        text: patch.text ?? (current.type === "browser_fill" ? current.text : ""),
+        timeout_ms,
+      };
+    case "browser_wait_for":
+      return { type: "browser_wait_for", selector, timeout_ms };
+    case "browser_get_text":
+      return {
+        type: "browser_get_text",
+        selector,
+        timeout_ms,
+        variable:
+          patch.variable ??
+          (current.type === "browser_get_text" ? current.variable : undefined),
+      };
+    default:
+      return current;
   }
 }

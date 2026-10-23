@@ -1,0 +1,5 @@
+{
+  "name": "browser-demo-flow",
+  "version": "0.1.0",
+  "description": "CDP navigate + wait + get_text + file_write (example.com)"
+}

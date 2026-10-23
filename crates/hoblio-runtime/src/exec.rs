@@ -5,6 +5,7 @@ use hoblio_log::runtime_event;
 use hoblio_model::{FlowProject, NodeKind, validate_graph};
 
 use crate::actions::execute_action;
+use crate::browser::BrowserContext;
 use crate::events::{RunEvent, RunOutcome};
 
 pub fn run_project(project: &FlowProject) -> Result<RunOutcome> {
@@ -17,6 +18,20 @@ where
 {
     validate_graph(&project.flow).map_err(|e| anyhow::anyhow!(e))?;
 
+    let mut browser = BrowserContext::new()?;
+    let run_result = run_project_inner(project, &browser, &mut on_event);
+    browser.shutdown();
+    run_result
+}
+
+fn run_project_inner<F>(
+    project: &FlowProject,
+    browser: &BrowserContext,
+    on_event: &mut F,
+) -> Result<RunOutcome>
+where
+    F: FnMut(RunEvent),
+{
     let mut events = vec![RunEvent::RunStarted {
         project: project.manifest.name.clone(),
     }];
@@ -80,7 +95,7 @@ where
                     .action
                     .as_ref()
                     .context("action node without action")?;
-                let summary = execute_action(action)?;
+                let summary = execute_action(action, browser)?;
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary,

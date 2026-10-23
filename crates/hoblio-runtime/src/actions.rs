@@ -1,13 +1,13 @@
 use std::fs;
 use std::path::Path;
-use std::time::Duration;
 
 use anyhow::{Context, Result};
 use hoblio_model::ActionKind;
 
+use crate::browser::BrowserContext;
 use crate::show_message::spawn_show_message;
 
-pub fn execute_action(action: &ActionKind) -> Result<String> {
+pub fn execute_action(action: &ActionKind, browser: &BrowserContext) -> Result<String> {
     match action {
         ActionKind::Log(log) => {
             println!("{}", log.message);
@@ -16,7 +16,25 @@ pub fn execute_action(action: &ActionKind) -> Result<String> {
         ActionKind::NoOp => Ok("noop".into()),
         ActionKind::FileWrite { path, content } => file_write(path, content),
         ActionKind::HttpGet { url } => http_get(url),
-        ActionKind::BrowserNavigate { url, wait_ms } => browser_navigate(url, *wait_ms),
+        ActionKind::BrowserNavigate { url, wait_ms } => browser.navigate(url, *wait_ms),
+        ActionKind::BrowserClick {
+            selector,
+            timeout_ms,
+        } => browser.click(selector, *timeout_ms),
+        ActionKind::BrowserFill {
+            selector,
+            text,
+            timeout_ms,
+        } => browser.fill(selector, text, *timeout_ms),
+        ActionKind::BrowserWaitFor {
+            selector,
+            timeout_ms,
+        } => browser.wait_for(selector, *timeout_ms),
+        ActionKind::BrowserGetText {
+            selector,
+            timeout_ms,
+            variable,
+        } => browser.get_text(selector, *timeout_ms, variable.as_deref()),
         ActionKind::ShowMessage {
             title,
             text,
@@ -47,7 +65,11 @@ fn file_write(path: &str, content: &str) -> Result<String> {
     }
     fs::write(path, content.as_bytes())
         .with_context(|| format!("write file {}", path.display()))?;
-    Ok(format!("file_write: {} ({} bytes)", path.display(), content.len()))
+    Ok(format!(
+        "file_write: {} ({} bytes)",
+        path.display(),
+        content.len()
+    ))
 }
 
 fn http_get(url: &str) -> Result<String> {
@@ -61,54 +83,5 @@ fn http_get(url: &str) -> Result<String> {
         "http_get: {url} -> {status} ({} bytes): {preview}{}",
         body.len(),
         if body.len() > 120 { "…" } else { "" }
-    ))
-}
-
-fn browser_navigate(url: &str, wait_ms: Option<u64>) -> Result<String> {
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .context("create tokio runtime for browser")?
-        .block_on(async { browser_navigate_async(url, wait_ms).await })
-}
-
-async fn browser_navigate_async(url: &str, wait_ms: Option<u64>) -> Result<String> {
-    use chromiumoxide::browser::{Browser, BrowserConfig};
-    use futures::StreamExt;
-
-    let mut cfg = BrowserConfig::builder();
-    if let Ok(path) = std::env::var("HOBLIO_CHROME_PATH") {
-        cfg = cfg.chrome_executable(path);
-    }
-    let (mut browser, mut handler) = Browser::launch(cfg.build().map_err(|e| {
-        anyhow::anyhow!("launch Chromium (install Chrome/Chromium or set HOBLIO_CHROME_PATH): {e}")
-    })?)
-    .await
-    .context("start Chromium for CDP")?;
-
-    let handle = tokio::spawn(async move {
-        while let Some(h) = handler.next().await {
-            if h.is_err() {
-                break;
-            }
-        }
-    });
-
-    let page = browser
-        .new_page(url)
-        .await
-        .with_context(|| format!("navigate to {url}"))?;
-
-    if let Some(ms) = wait_ms {
-        tokio::time::sleep(Duration::from_millis(ms)).await;
-    }
-
-    let title = page.get_title().await.unwrap_or_default();
-    browser.close().await.ok();
-    handle.abort();
-
-    Ok(format!(
-        "browser_navigate: {url} (title={:?})",
-        title.unwrap_or_default()
     ))
 }

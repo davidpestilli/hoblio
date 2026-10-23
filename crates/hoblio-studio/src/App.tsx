@@ -215,6 +215,18 @@ export default function App() {
           <button type="button" onClick={() => addAction("browser_navigate")}>
             BrowserNavigate
           </button>
+          <button type="button" onClick={() => addAction("browser_click")}>
+            BrowserClick
+          </button>
+          <button type="button" onClick={() => addAction("browser_fill")}>
+            BrowserFill
+          </button>
+          <button type="button" onClick={() => addAction("browser_wait_for")}>
+            BrowserWaitFor
+          </button>
+          <button type="button" onClick={() => addAction("browser_get_text")}>
+            BrowserGetText
+          </button>
           <button type="button" onClick={() => addAction("show_message")}>
             ShowMessage
           </button>

@@ -2,7 +2,7 @@
 
 Hoblio é um projeto de RPA desktop leve, inspirado na experiência do **Power Automate Desktop (PAD)**, com foco em uso **local e pessoal**: desenhar fluxos em um canvas flowchart, executar com logs e evoluir para automação de navegador, arquivos e HTTP.
 
-**Fase 0 (atual):** workspace Rust — modelo JSON em pasta de projeto, validação, runtime stub e CLI. Sem Tauri/UI ainda.
+**MVP em progresso:** Studio Tauri + runtime com browser CDP (navigate, click, fill, wait, get_text), arquivos, HTTP e logs — ver `docs/fase-mvp-slice3-browser.md`.
 
 Documentação de produto: [`docs/decisoes-produto.md`](docs/decisoes-produto.md) (cópia local) · estudo: [`docs/estudo-viabilidade.md`](docs/estudo-viabilidade.md) · [`docs/fase-0.md`](docs/fase-0.md).
 

@@ -1,0 +1,91 @@
+{
+  "start": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "Start",
+      "ui": { "x": 0, "y": 0 }
+    },
+    {
+      "id": "log_start",
+      "kind": "action",
+      "label": "Log start",
+      "action": {
+        "type": "log",
+        "message": "browser-demo-flow: opening example.com"
+      },
+      "ui": { "x": 180, "y": 0 }
+    },
+    {
+      "id": "nav",
+      "kind": "action",
+      "label": "Navigate",
+      "action": {
+        "type": "browser_navigate",
+        "url": "https://example.com",
+        "wait_ms": 500
+      },
+      "ui": { "x": 360, "y": 0 }
+    },
+    {
+      "id": "wait_h1",
+      "kind": "action",
+      "label": "Wait h1",
+      "action": {
+        "type": "browser_wait_for",
+        "selector": "h1",
+        "timeout_ms": 15000
+      },
+      "ui": { "x": 540, "y": 0 }
+    },
+    {
+      "id": "get_heading",
+      "kind": "action",
+      "label": "Get heading",
+      "action": {
+        "type": "browser_get_text",
+        "selector": "h1",
+        "variable": "page_heading"
+      },
+      "ui": { "x": 720, "y": 0 }
+    },
+    {
+      "id": "write_out",
+      "kind": "action",
+      "label": "Write file",
+      "action": {
+        "type": "file_write",
+        "path": "examples/browser-demo-flow/output/heading.txt",
+        "content": "Extracted heading is in the run log (browser_get_text summary). Open Run log / CLI output for the live text."
+      },
+      "ui": { "x": 900, "y": 0 }
+    },
+    {
+      "id": "log_done",
+      "kind": "action",
+      "label": "Log done",
+      "action": {
+        "type": "log",
+        "message": "browser-demo-flow complete"
+      },
+      "ui": { "x": 1080, "y": 0 }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "End",
+      "ui": { "x": 1260, "y": 0 }
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "log_start" },
+    { "from": "log_start", "to": "nav" },
+    { "from": "nav", "to": "wait_h1" },
+    { "from": "wait_h1", "to": "get_heading" },
+    { "from": "get_heading", "to": "write_out" },
+    { "from": "write_out", "to": "log_done" },
+    { "from": "log_done", "to": "end" }
+  ],
+  "variables": {}
+}

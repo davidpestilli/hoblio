@@ -1,5 +1,5 @@
 import type { FlowNode, ActionKind } from "./model";
-import { actionLabel, defaultAction } from "./model";
+import { actionLabel, defaultAction, patchBrowserDomAction } from "./model";
 
 type Props = {
   node: FlowNode | null;
@@ -56,6 +56,10 @@ export function PropertiesPanel({ node, onChange }: Props) {
               <option value="file_write">FileWrite</option>
               <option value="http_get">HttpGet</option>
               <option value="browser_navigate">BrowserNavigate</option>
+              <option value="browser_click">BrowserClick</option>
+              <option value="browser_fill">BrowserFill</option>
+              <option value="browser_wait_for">BrowserWaitFor</option>
+              <option value="browser_get_text">BrowserGetText</option>
               <option value="show_message">ShowMessage</option>
             </select>
           </label>
@@ -193,6 +197,78 @@ export function PropertiesPanel({ node, onChange }: Props) {
                 />
               </label>
             </>
+          )}
+
+          {(node.action.type === "browser_click" ||
+            node.action.type === "browser_fill" ||
+            node.action.type === "browser_wait_for" ||
+            node.action.type === "browser_get_text") && (
+            <>
+              <label>
+                CSS selector
+                <input
+                  value={node.action.selector}
+                  onChange={(e) =>
+                    onChange({
+                      ...node,
+                      action: patchBrowserDomAction(node.action!, { selector: e.target.value }, node.action!.type),
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Timeout (ms)
+                <input
+                  type="number"
+                  value={node.action.timeout_ms ?? ""}
+                  onChange={(e) =>
+                    onChange({
+                      ...node,
+                      action: patchBrowserDomAction(
+                        node.action!,
+                        { timeout_ms: e.target.value ? Number(e.target.value) : undefined },
+                        node.action!.type
+                      ),
+                    })
+                  }
+                />
+              </label>
+            </>
+          )}
+
+          {node.action.type === "browser_fill" && (
+            <label>
+              Text
+              <textarea
+                rows={3}
+                value={node.action.text}
+                onChange={(e) =>
+                  onChange({
+                    ...node,
+                    action: patchBrowserDomAction(node.action!, { text: e.target.value }, "browser_fill"),
+                  })
+                }
+              />
+            </label>
+          )}
+
+          {node.action.type === "browser_get_text" && (
+            <label>
+              Variable name (optional, log-only for now)
+              <input
+                value={node.action.variable ?? ""}
+                onChange={(e) =>
+                  onChange({
+                    ...node,
+                    action: patchBrowserDomAction(
+                      node.action!,
+                      { variable: e.target.value || undefined },
+                      "browser_get_text"
+                    ),
+                  })
+                }
+              />
+            </label>
           )}
         </>
       )}
