@@ -1,6 +1,12 @@
 /target/
+**/target/
 **/.hoblio/
+node_modules/
+**/dist/
 *.rs.bk
 .idea/
 .vscode/
 .DS_Store
+Thumbs.db
+*.log
+crates/hoblio-studio/src-tauri/examples/
