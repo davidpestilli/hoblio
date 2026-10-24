@@ -55,4 +55,4 @@ cargo tauri dev --manifest-path crates/hoblio-studio/src-tauri/Cargo.toml
 
 ## Próximo passo sugerido
 
-Condicionais no grafo, mais passos browser (CDP), polish do studio (delete nó, undo), empacotamento local.
+Condicionais no grafo e runtime com ramificações; painel de variáveis no Studio; empacotamento local. (Edição de canvas: ver [slice 4](fase-mvp-slice4-flow-editor.md).)

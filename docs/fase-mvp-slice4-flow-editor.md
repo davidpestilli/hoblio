@@ -1,0 +1,47 @@
+# Fase MVP — slice 4 (editor de fluxo completo)
+
+**Estado:** Studio com edição visual de grafo no estilo do painel Nape (`central_nape`): nós, conexões nos quatro lados, tracado e histórico local.
+
+## O que foi entregue
+
+| Área | Detalhe |
+|------|---------|
+| **Canvas** | `crates/hoblio-studio/src/flow/` — `FlowCanvas`, `FlowToolbar`, `WaypointEdge`, alinhamento ao arrastar, `@xyflow/react` 12 |
+| **Modos** | **Exibição** / **Edição**; desfazer/refazer (40 níveis); Delete/Backspace em seleção |
+| **Nós** | Paleta de ações + **End node**; handles de entrada/saída em **topo, direita, baixo, esquerda** (Start só saída; End só entrada) |
+| **Conexões** | Criar, religar extremos, apagar, rótulo na toolbar; pontos de passagem (+) no tracado |
+| **Persistência** | `flow.json` — arestas com `id`, `label`, `ui.waypoints`, `ui.sourceHandle`, `ui.targetHandle` (`hoblio-model`) |
+| **Runtime** | Inalterado: ainda **uma aresta de saída por nó** (cadeia linear); validação `validate_graph` no Save/Validate/Run |
+
+## Estrutura no frontend
+
+```
+crates/hoblio-studio/src/flow/
+  useFlowEditor.ts      # estado, histórico, connect/reconnect/delete
+  FlowCanvas.tsx        # React Flow + guias de alinhamento
+  FlowToolbar.tsx       # modo edição, undo, barra da conexão selecionada
+  WaypointEdge.tsx      # tracado customizado
+  flowAlignment.ts      # snap entre nós
+  flowConvert.ts        # (pai) grafo JSON ↔ React Flow
+```
+
+## Comandos
+
+```powershell
+cd crates/hoblio-studio
+npm run build
+npm run tauri dev
+```
+
+Abra `examples/demo-flow`, use **Edição**, ligue nós pelos conectores azuis/cinza, **Save**, reabra para confirmar posição e tracado.
+
+## Limitações (slice 4)
+
+- Grafo de execução continua **linear** (substituir aresta ao conectar nova saída do mesmo nó).
+- Sem ramificações If/condicionais no runtime.
+- Undo/redo só na sessão do Studio (não versiona git).
+- Inspiração de UX: fluxo do Nape; sem mapa de fases/sentinelas (domínio diferente).
+
+## Próximo passo sugerido
+
+Ramificações no grafo + runtime, ou painel de variáveis no Studio.

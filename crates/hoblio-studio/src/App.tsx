@@ -1,74 +1,36 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-  addEdge,
-  useEdgesState,
-  useNodesState,
-  type Connection,
-  type Node,
-} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 
-import { HoblioNode } from "./HoblioNode";
+import { FlowCanvas } from "./flow/FlowCanvas";
+import { useFlowEditor } from "./flow/useFlowEditor";
 import {
-  flowToGraph,
-  graphToFlow,
-  newActionNodeId,
-  type HoblioNodeData,
-} from "./flowConvert";
-import {
-  defaultAction,
   defaultProject,
-  type ActionKind,
   type FlowNode,
   type FlowProject,
+  type ActionKind,
 } from "./model";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { RunLogPanel } from "./RunLogPanel";
 import { logLineFromEvent, type LogLine, type RunEvent } from "./runLog";
 
-const nodeTypes = { hoblio: HoblioNode };
-
 export default function App() {
-  const [project, setProject] = useState<FlowProject>(defaultProject);
+  const [project, setProject] = useState<FlowProject>(() => defaultProject());
   const [projectDir, setProjectDir] = useState<string | null>(null);
   const [status, setStatus] = useState("Ready");
   const [logLines, setLogLines] = useState<LogLine[]>([]);
   const [showLogJson, setShowLogJson] = useState(false);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-
-  const initial = useMemo(() => graphToFlow(project.flow), []);
-  const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const editor = useFlowEditor(project);
+
   const syncProjectFromCanvas = useCallback((): FlowProject => {
-    const flow = flowToGraph(nodes, edges, project.flow.start);
-    return { ...project, flow };
-  }, [nodes, edges, project]);
-
-  const loadCanvas = useCallback((p: FlowProject) => {
-    const { nodes: n, edges: e } = graphToFlow(p.flow);
-    setNodes(n);
-    setEdges(e);
-    setProject(p);
-  }, [setNodes, setEdges]);
-
-  useEffect(() => {
-    setNodes((nds) =>
-      nds.map((n) => ({
-        ...n,
-        data: { ...n.data, active: n.id === activeNodeId },
-      })),
-    );
-  }, [activeNodeId, setNodes]);
+    return { ...project, flow: editor.toFlowGraph() };
+  }, [editor, project]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,23 +57,33 @@ export default function App() {
     };
   }, []);
 
+  const nodesWithActive = useMemo(
+    () =>
+      editor.nodes.map((n) => ({
+        ...n,
+        data: { ...n.data, active: n.id === activeNodeId },
+      })),
+    [activeNodeId, editor.nodes],
+  );
+
+  const editorWithActive = useMemo(
+    () => ({ ...editor, nodes: nodesWithActive }),
+    [editor, nodesWithActive],
+  );
+
   const selectedNode: FlowNode | null = useMemo(() => {
     if (!selectedId) return null;
-    const n = nodes.find((x) => x.id === selectedId);
+    const n = editor.nodes.find((x) => x.id === selectedId);
     return n?.data.flowNode ?? null;
-  }, [nodes, selectedId]);
-
-  const onConnect = useCallback(
-    (c: Connection) => setEdges((eds) => addEdge({ ...c, id: `e-${c.source}-${c.target}` }, eds)),
-    [setEdges],
-  );
+  }, [editor.nodes, selectedId]);
 
   const openProject = async () => {
     const dir = await open({ directory: true, multiple: false });
     if (!dir || typeof dir !== "string") return;
     const loaded = await invoke<FlowProject>("load_project_cmd", { path: dir });
     setProjectDir(dir);
-    loadCanvas(loaded);
+    setProject(loaded);
+    editor.loadProject(loaded);
     setLogLines([]);
     setStatus(`Opened ${dir}`);
   };
@@ -154,29 +126,7 @@ export default function App() {
     }
   };
 
-  const addAction = (type: ActionKind["type"]) => {
-    const id = newActionNodeId();
-    const flowNode: FlowNode = {
-      id,
-      kind: "action",
-      label: type.replace(/_/g, " "),
-      action: defaultAction(type),
-      ui: { x: 240, y: 240 },
-    };
-    const node: Node<HoblioNodeData> = {
-      id,
-      type: "hoblio",
-      position: { x: 240, y: 240 },
-      data: { flowNode },
-    };
-    setNodes((nds) => [...nds, node]);
-  };
-
-  const updateSelectedNode = (flowNode: FlowNode) => {
-    setNodes((nds) =>
-      nds.map((n) => (n.id === flowNode.id ? { ...n, data: { flowNode } } : n)),
-    );
-  };
+  const addAction = (type: ActionKind["type"]) => editor.addAction(type);
 
   return (
     <div className="app">
@@ -230,24 +180,26 @@ export default function App() {
           <button type="button" onClick={() => addAction("show_message")}>
             ShowMessage
           </button>
+          <hr className="palette-divider" />
+          <button type="button" onClick={() => editor.addEndNode()}>
+            End node
+          </button>
         </aside>
         <div className="canvas">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onSelectionChange={({ nodes: sel }) => setSelectedId(sel[0]?.id ?? null)}
-            fitView
-          >
-            <Background />
-            <Controls />
-            <MiniMap />
-          </ReactFlow>
+          <FlowCanvas controller={editorWithActive} onSelectNodeId={setSelectedId} />
         </div>
-        <PropertiesPanel node={selectedNode} onChange={updateSelectedNode} />
+        <PropertiesPanel
+          node={selectedNode}
+          onChange={editor.updateFlowNode}
+          onDelete={
+            selectedId && selectedNode?.kind !== "start"
+              ? () => {
+                  editor.deleteNode(selectedId);
+                  setSelectedId(null);
+                }
+              : undefined
+          }
+        />
       </div>
       <RunLogPanel
         lines={logLines}

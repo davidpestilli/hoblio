@@ -4,9 +4,10 @@ import { actionLabel, defaultAction, patchBrowserDomAction } from "./model";
 type Props = {
   node: FlowNode | null;
   onChange: (node: FlowNode) => void;
+  onDelete?: () => void;
 };
 
-export function PropertiesPanel({ node, onChange }: Props) {
+export function PropertiesPanel({ node, onChange, onDelete }: Props) {
   if (!node) {
     return <div className="panel properties">Select a node</div>;
   }
@@ -42,6 +43,12 @@ export function PropertiesPanel({ node, onChange }: Props) {
           disabled={node.kind === "start"}
         />
       </label>
+
+      {node.kind !== "start" && onDelete ? (
+        <button type="button" className="props-delete" onClick={onDelete}>
+          Delete node
+        </button>
+      ) : null}
 
       {node.kind === "action" && node.action && (
         <>

@@ -1,23 +1,38 @@
-import type { Edge, Node } from "@xyflow/react";
-import type { FlowGraph, FlowNode } from "./model";
+import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
-export type HoblioNodeData = {
-  flowNode: FlowNode;
-  active?: boolean;
-};
+import type { FlowEdge, FlowGraph, FlowNode } from "./model";
+import type { HoblioFlowEdge, HoblioNodeData } from "./flow/flowTypes";
 
-export function graphToFlow(graph: FlowGraph): { nodes: Node<HoblioNodeData>[]; edges: Edge[] } {
+export type { HoblioNodeData };
+
+function resolveEdgeId(edge: FlowEdge, index: number): string {
+  return edge.id ?? `e-${edge.from}-${edge.to}-${index}`;
+}
+
+export function graphToFlow(graph: FlowGraph): { nodes: Node<HoblioNodeData>[]; edges: HoblioFlowEdge[] } {
   const nodes: Node<HoblioNodeData>[] = graph.nodes.map((n) => ({
     id: n.id,
     type: "hoblio",
     position: { x: n.ui?.x ?? 0, y: n.ui?.y ?? 0 },
     data: { flowNode: n },
   }));
-  const edges: Edge[] = graph.edges.map((e, i) => ({
-    id: `e-${e.from}-${e.to}-${i}`,
-    source: e.from,
-    target: e.to,
-  }));
+  const edges: HoblioFlowEdge[] = graph.edges.map((e, i) => {
+    const id = resolveEdgeId(e, i);
+    return {
+      id,
+      type: "waypoint",
+      source: e.from,
+      target: e.to,
+      sourceHandle: e.ui?.sourceHandle,
+      targetHandle: e.ui?.targetHandle,
+      label: e.label,
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
+      data: {
+        flowEdge: { ...e, id },
+        waypoints: e.ui?.waypoints ?? [],
+      },
+    };
+  });
   return { nodes, edges };
 }
 
@@ -33,10 +48,24 @@ export function flowToGraph(
       ui: { x: n.position.x, y: n.position.y },
     };
   });
-  const flowEdges = edges.map((e) => ({
-    from: e.source,
-    to: e.target,
-  }));
+  const flowEdges: FlowEdge[] = edges.map((e) => {
+    const data = (e as HoblioFlowEdge).data;
+    const waypoints = data?.waypoints ?? [];
+    const flowEdge = data?.flowEdge;
+    const sourceHandle = typeof e.sourceHandle === "string" ? e.sourceHandle : undefined;
+    const targetHandle = typeof e.targetHandle === "string" ? e.targetHandle : undefined;
+    const ui =
+      waypoints.length > 0 || sourceHandle || targetHandle
+        ? { waypoints: waypoints.length > 0 ? waypoints : undefined, sourceHandle, targetHandle }
+        : undefined;
+    return {
+      id: e.id,
+      from: e.source,
+      to: e.target,
+      label: typeof e.label === "string" ? e.label : flowEdge?.label,
+      ui,
+    };
+  });
   return { start, nodes: flowNodes, edges: flowEdges };
 }
 

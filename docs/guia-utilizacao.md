@@ -25,9 +25,19 @@ npm run tauri dev
 ```
 
 1. **Open** — selecione uma **pasta** de projeto (ex.: `examples\demo-flow`).
-2. Arraste ações da paleta ou edite nós no canvas.
-3. **Validate** — checa o grafo.
-4. **Run** — executa; nó ativo destacado; painel **Run log** abaixo.
+2. No canvas, use **Edição** (barra acima do diagrama):
+   - **Paleta** (esquerda): adicionar ações ou nó **End**.
+   - **Conexões:** arraste de um conector **azul** (saída) para **cinza** (entrada) em qualquer um dos **quatro lados** do nó.
+   - **Selecionar** nó ou aresta; **Delete** / **Backspace** remove (o nó Start não pode ser apagado).
+   - **Religar:** no modo Edição, arraste a ponta de uma aresta para outro conector.
+   - **Tracado:** com aresta selecionada, use **+** no meio do segmento; arraste o ponto; duplo clique remove.
+   - **Desfazer / Refazer** na toolbar do canvas.
+3. **Painel Properties** (direita): rótulo e parâmetros da ação; **Delete node** quando aplicável.
+4. **Validate** — checa o grafo.
+5. **Save** — grava posição, arestas, rótulos e tracado em `flow.json`.
+6. **Run** — executa; nó ativo destacado; painel **Run log** abaixo.
+
+**Exibição** desliga arraste e edição de conexões (só navegar/zoom).
 
 **Run log:** linhas legíveis; botão **Copy logs**; toggle **JSON** se quiser o formato bruto.
 
@@ -114,9 +124,9 @@ No Studio: **Save** na pasta do projeto (mesma que abriu ou nova pasta vazia com
 Estrutura mínima:
 
 - `manifest.json` — nome e metadados do projeto
-- `flow.json` — nós (ações + posição) e arestas entre eles
+- `flow.json` — nós (ações + posição `ui`), arestas (`from`/`to`, `label`, `ui` com waypoints e lados dos conectores)
 
-Montagem **manual** no canvas (sem gravador de cliques).
+Montagem no canvas (sem gravador de cliques). Detalhes técnicos: [guia de construção §9](guia-construcao.md) e [slice 4](fase-mvp-slice4-flow-editor.md).
 
 ---
 

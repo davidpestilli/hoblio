@@ -8,7 +8,7 @@ Hoblio é um **designer de fluxos local** (estilo RPA desktop leve): você monta
 
 **Stack:** Rust (runtime + CLI) · Tauri 2 + React + React Flow (Studio).
 
-**Estado:** MVP em progresso (Studio + browser CDP, arquivos, HTTP) — detalhes em [`docs/fase-mvp-slice3-browser.md`](docs/fase-mvp-slice3-browser.md).
+**Estado:** MVP em progresso (Studio com editor de fluxo completo, browser CDP, arquivos, HTTP) — slices em `docs/fase-mvp-slice*.md` (último: [slice 4 — flow editor](docs/fase-mvp-slice4-flow-editor.md)).
 
 ## Documentação
 

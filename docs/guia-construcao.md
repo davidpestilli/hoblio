@@ -128,6 +128,20 @@ npm run tauri build
 
 Artefatos em `crates/hoblio-studio/src-tauri/target/release/` (caminho pode variar conforme Tauri).
 
+### Editor de fluxo (Studio)
+
+Implementação em `crates/hoblio-studio/src/flow/` (React Flow 12), inspirada no editor do projeto **central_nape** (modo Edição, conexões, waypoints, alinhamento):
+
+| Módulo | Função |
+|--------|--------|
+| `useFlowEditor.ts` | Estado do canvas, undo/redo, connect/reconnect, apagar nós/arestas |
+| `FlowCanvas.tsx` | React Flow, guias de alinhamento, tecla Delete |
+| `FlowToolbar.tsx` | Exibição/Edição, desfazer/refazer, rótulo da aresta selecionada |
+| `WaypointEdge.tsx` | Tracado com pontos de passagem |
+| `flowConvert.ts` | Conversão `flow.json` ↔ nós/arestas do React Flow |
+
+Detalhes do slice: [fase-mvp-slice4-flow-editor.md](fase-mvp-slice4-flow-editor.md).
+
 ---
 
 ## 4.1 Browser (CDP), variáveis e `setup-dev`
@@ -196,7 +210,7 @@ Interpolação `{variavel}` usa variáveis definidas em **`browser_get_text`** d
 1. **`hoblio-model`** — variant em `ActionKind` + struct de parâmetros + validação.
 2. **`hoblio-serde`** — garantir serialização JSON (serde).
 3. **`hoblio-runtime`** — executor em `actions.rs` (ou módulo); emitir eventos `action_executed`.
-4. **`hoblio-studio`** — entrada na paleta, formulário de propriedades, mapeamento para JSON ao salvar.
+4. **`hoblio-studio`** — entrada na paleta, formulário de propriedades, mapeamento para JSON ao salvar (`flowConvert.ts` + `useFlowEditor`).
 5. **`examples/`** — fluxo demo mínimo.
 6. **Teste** — unit em model/runtime; doc em `docs/fase-mvp-sliceN-….md` ou atualizar este guia.
 
@@ -211,10 +225,17 @@ Pasta exemplo:
 ```
 meu-fluxo/
 ├── manifest.json    # id, nome, versão do schema
-└── flow.json        # nodes[], edges[], start
+└── flow.json        # nodes[], edges[], start, variables (opcional)
 ```
 
-Edição manual possível; o Studio é o editor visual preferido. Condicionais (If) e subfluxos ainda em evolução — ver [decisoes-produto.md](decisoes-produto.md).
+**Nó (`nodes[]`):** `id`, `kind` (`start` | `action` | `end`), `label`, `action` (se action), `ui: { x, y }`.
+
+**Aresta (`edges[]`):** `from`, `to`, `label` (opcional), `id` (opcional, estável no Studio), `ui` (opcional):
+
+- `waypoints`: `[{ x, y }, …]` — pontos do tracado no canvas
+- `sourceHandle` / `targetHandle`: `"top" | "right" | "bottom" | "left"` — lado do conector
+
+Edição manual no JSON continua possível; o **Studio** é o editor visual preferido (quatro lados por nó, religar, waypoints). Condicionais (If) e subfluxos ainda em evolução — ver [decisoes-produto.md](decisoes-produto.md).
 
 ---
 

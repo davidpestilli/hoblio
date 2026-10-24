@@ -20,10 +20,21 @@ export interface FlowNode {
   ui?: { x: number; y: number };
 }
 
+export interface Waypoint {
+  x: number;
+  y: number;
+}
+
 export interface FlowEdge {
+  id?: string;
   from: string;
   to: string;
   label?: string;
+  ui?: {
+    waypoints?: Waypoint[];
+    sourceHandle?: string;
+    targetHandle?: string;
+  };
 }
 
 export interface FlowGraph {

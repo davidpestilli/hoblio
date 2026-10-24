@@ -32,8 +32,29 @@ pub struct NodeUi {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Edge {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
     pub from: NodeId,
     pub to: NodeId,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ui: Option<EdgeUi>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EdgeUi {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub waypoints: Option<Vec<Waypoint>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_handle: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_handle: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Waypoint {
+    pub x: f64,
+    pub y: f64,
 }

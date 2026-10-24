@@ -143,14 +143,18 @@ mod tests {
             ],
             edges: vec![
                 Edge {
+                    id: None,
                     from: "start".into(),
                     to: "log1".into(),
                     label: None,
+                    ui: None,
                 },
                 Edge {
+                    id: None,
                     from: "log1".into(),
                     to: "end".into(),
                     label: None,
+                    ui: None,
                 },
             ],
         }
