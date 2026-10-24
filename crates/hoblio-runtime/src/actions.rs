@@ -6,15 +6,25 @@ use hoblio_model::ActionKind;
 
 use crate::browser::BrowserContext;
 use crate::show_message::spawn_show_message;
+use crate::variables::{RunVariables, interpolate};
 
-pub fn execute_action(action: &ActionKind, browser: &BrowserContext) -> Result<String> {
+pub fn execute_action(
+    action: &ActionKind,
+    browser: &BrowserContext,
+    vars: &mut RunVariables,
+) -> Result<String> {
     match action {
         ActionKind::Log(log) => {
-            println!("{}", log.message);
-            Ok(format!("log: {}", log.message))
+            let message = interpolate(&log.message, vars)?;
+            println!("{message}");
+            Ok(format!("log: {message}"))
         }
         ActionKind::NoOp => Ok("noop".into()),
-        ActionKind::FileWrite { path, content } => file_write(path, content),
+        ActionKind::FileWrite { path, content } => {
+            let path = interpolate(path, vars)?;
+            let content = interpolate(content, vars)?;
+            file_write(&path, &content)
+        }
         ActionKind::HttpGet { url } => http_get(url),
         ActionKind::BrowserNavigate { url, wait_ms } => browser.navigate(url, *wait_ms),
         ActionKind::BrowserClick {
@@ -34,7 +44,7 @@ pub fn execute_action(action: &ActionKind, browser: &BrowserContext) -> Result<S
             selector,
             timeout_ms,
             variable,
-        } => browser.get_text(selector, *timeout_ms, variable.as_deref()),
+        } => browser.get_text(selector, *timeout_ms, variable.as_deref(), vars),
         ActionKind::ShowMessage {
             title,
             text,

@@ -1,6 +1,7 @@
 /target/
 **/target/
 **/.hoblio/
+examples/**/output/
 node_modules/
 **/dist/
 *.rs.bk

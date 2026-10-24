@@ -68,14 +68,14 @@ Com **menos de ~5 GB livres no C:**, o `setup-dev.bat` define automaticamente `C
 |----------|-----|
 | `HOBLIO_VS_INSTALL_PATH` | Ex.: `E:\VS\BuildTools` — destino das Build Tools quando o C: está cheio |
 | `HOBLIO_CARGO_TARGET_DIR` | Pasta de `target` do Cargo fora do C: |
-| `HOBLIO_CHROME_PATH` | Chrome/Edge para demos browser |
+| `HOBLIO_CHROME_PATH` | Override se Chrome/Edge não for detectado automaticamente |
 
 ---
 
 ## Browser / `browser_*` falha
 
-- Instale Chrome ou Edge (Chromium).
-- Ou: `$env:HOBLIO_CHROME_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"`
+- Instale **Google Chrome** ou **Microsoft Edge** (Chromium). O Hoblio tenta achar o `.exe` em `Program Files`, `Program Files (x86)` e `%LOCALAPPDATA%` (comportamento parecido com Power Automate Desktop).
+- Se a detecção falhar: `$env:HOBLIO_CHROME_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"`
 
 Detalhes de detecção automática: [guia de construção](guia-construcao.md) (variáveis de ambiente).
 

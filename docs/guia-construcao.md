@@ -78,7 +78,8 @@ Atalho equivalente: `setup-dev.bat` na raiz (delega para `scripts\`).
 
 O script **verifica espaço livre no C:** (~4 ou ~7 GB, conforme MSVC) **antes** de prosseguir, tenta instalar **Rust** e **Node.js LTS** via `winget`, **verifica Build Tools MSVC** (`link.exe` / `cl`, `vcvars64`, `vswhere`) antes de compilar, roda `npm install` + `npm run build` no Studio, `cargo test` e `validate` nos quatro exemplos em `examples/`. Se faltar MSVC, exibe instruções (e opcionalmente `winget` com carga **VCTools**) e **não** declara sucesso — ver [troubleshooting-windows.md](troubleshooting-windows.md). Com **C:** apertado: `HOBLIO_VS_INSTALL_PATH`, `HOBLIO_CARGO_TARGET_DIR` (documentadas no troubleshooting).
 
-- **`scripts\setup-dev.bat --full`** — além do acima, executa `run` em `demo-flow`, `web-demo-flow` e `browser-demo-flow` (browser só se Chrome/Edge ou `HOBLIO_CHROME_PATH` estiver definido).
+- **`scripts\setup-dev.bat --full`** — além do acima, executa `run` em `demo-flow`, `web-demo-flow` e `browser-demo-flow` (browser se Chrome/Edge for detectado nos caminhos padrão).
+- Após **`git pull`**, rode `setup-dev.bat` de novo (ou `cargo build` + `npm run build` no Studio) para alinhar binários com o código.
 - **Códigos de saída:** `0` sucesso; `1` falha em pré-requisito, build ou teste; `2` argumento inválido.
 
 Depois do setup:
@@ -129,6 +130,20 @@ Artefatos em `crates/hoblio-studio/src-tauri/target/release/` (caminho pode vari
 
 ---
 
+## 4.1 Browser (CDP), variáveis e `setup-dev`
+
+| Tópico | Detalhe |
+|--------|---------|
+| **Biblioteca** | `chromiumoxide` **0.9** (CDP compatível com Chrome/Edge recentes) |
+| **Executável** | Detecção automática de `chrome.exe` / `msedge.exe` (`crates/hoblio-runtime/src/chromium_exe.rs`) — caminhos padrão Windows, como RPA desktop (ex. Power Automate). Override: `HOBLIO_CHROME_PATH` |
+| **Variáveis de execução** | `browser_get_text` + campo `variable` grava texto; `file_write` e `log` interpolam `{nome}` (ex.: `{page_heading}`) |
+| **Demo** | `examples/browser-demo-flow` — `example.com` usa `body p` (o site não expõe mais `<h1>`) |
+| **`setup-dev.bat`** | Pré-check de espaço no C:, MSVC com carga C++, `cargo test`, `validate` nos exemplos; informa qual Chromium foi detectado; `--full` roda demos browser se houver Chrome/Edge |
+
+Saída de exemplo do demo: `examples/browser-demo-flow/output/heading.txt` (gitignored) com o texto lido, quando o fluxo usa `{page_heading}` no `file_write`.
+
+---
+
 ## 5. CLI (sem UI)
 
 ```powershell
@@ -166,9 +181,13 @@ cargo run -p hoblio-cli -- run examples/browser-demo-flow
 
 | Variável | Efeito |
 |----------|--------|
-| `HOBLIO_CHROME_PATH` | Caminho para `chrome.exe` / `msedge.exe` se a detecção automática falhar |
+| `HOBLIO_CHROME_PATH` | Override de `chrome.exe` / `msedge.exe` se a detecção automática falhar |
+| `HOBLIO_VS_INSTALL_PATH` | Destino das Build Tools quando o C: está cheio (ver troubleshooting) |
+| `HOBLIO_CARGO_TARGET_DIR` | Pasta `target` do Cargo fora do C: |
 
 Logs JSONL por execução (CLI `--jsonl`): arquivos sob `.hoblio/` conforme `hoblio-log`.
+
+Interpolação `{variavel}` usa variáveis definidas em **`browser_get_text`** durante o run e valores string/number/bool em `flow.json` → `variables`.
 
 ---
 
@@ -209,7 +228,7 @@ Desenvolvimento local em `master`. Commits feature + mensagens descritivas. Remo
 
 - Grafo **linear ou DAG simples**; **If/condicionais** ainda não no produto (próximo sprint).
 - Browser: instância **controlada pelo runtime**, não attach à aba manual do usuário.
-- Variáveis: suporte parcial no runtime; UI de variáveis limitada no Studio.
+- Variáveis: runtime grava `browser_get_text` e interpola `{nome}` em `file_write`/`log`; painel de variáveis no Studio ainda limitado.
 - Excel, e-mail, HTTP avançado: fora ou adiados — ver decisões de produto.
 
 ---

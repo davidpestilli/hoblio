@@ -47,7 +47,7 @@ cargo run -p hoblio-cli -- run examples\demo-flow
 | `examples/demo-flow` | Logs simples (Hello + segundo passo) |
 | `examples/web-demo-flow` | HTTP GET `example.com` → grava arquivo → log |
 | `examples/message-timer-demo` | Janela nativa **`show_message`** com timer 2s |
-| `examples/browser-demo-flow` | Navegar → esperar `h1` → ler texto → gravar arquivo |
+| `examples/browser-demo-flow` | Navegar → esperar parágrafo em `example.com` → ler texto → gravar arquivo |
 
 Validar antes de rodar:
 
@@ -92,13 +92,16 @@ Ordem típica: **`browser_navigate`** primeiro; depois passos DOM na **mesma exe
 | `browser_wait_for` | Esperar seletor CSS aparecer |
 | `browser_click` | Clicar em seletor |
 | `browser_fill` | Limpar e digitar em campo |
-| `browser_get_text` | Ler texto do elemento (aparece no log da ação) |
+| `browser_get_text` | Ler texto; opcionalmente gravar em variável de execução (`variable`) |
+| `file_write` | Caminho/conteúdo podem usar `{nome_da_variavel}` |
 
-Se o browser não for encontrado, defina:
+**Chrome / Edge:** o runtime procura automaticamente `chrome.exe` ou `msedge.exe` nos caminhos padrão do Windows (mesma ideia do Power Automate “Iniciar novo Chrome”). Só use override se a detecção falhar:
 
 ```powershell
 $env:HOBLIO_CHROME_PATH = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 ```
+
+**Variáveis de execução:** `browser_get_text` com `variable: "page_heading"` guarda o texto; em `file_write` ou `log`, use `{page_heading}` no conteúdo (ou caminho).
 
 **Limitação:** o Hoblio abre um Chromium **controlado por ele**; não automatiza abas que você abriu manualmente no seu browser do dia a dia (por enquanto).
 

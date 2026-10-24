@@ -37,7 +37,7 @@ pub enum ActionKind {
         selector: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
-        /// Reserved for future variable binding in the Studio.
+        /// Run variable name; full text is stored for `{name}` in later actions (e.g. file_write).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         variable: Option<String>,
     },

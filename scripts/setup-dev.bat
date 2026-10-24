@@ -81,6 +81,7 @@ call :RequireCmd rustc --version
 call :RequireCmd cargo --version
 call :RequireCmd node --version
 call :RequireCmd npm --version
+call :ReportChromiumForDemos
 
 echo.
 echo --- cargo test ---
@@ -110,6 +111,8 @@ if "!FULL!"=="1" (
 
 echo.
 echo [setup-dev] OK — ambiente pronto.
+echo Browser p/ fluxos browser_*: deteccao automatica de Chrome/Edge ^(HOBLIO_CHROME_PATH opcional^).
+echo Variaveis de execucao: browser_get_text + `{nome}` em file_write/log — ver docs\guia-construcao.md
 echo Proximo passo:
 echo   cd crates\hoblio-studio
 echo   npm run tauri dev
@@ -384,25 +387,55 @@ if errorlevel 1 (
 )
 goto :eof
 
-:RunOptionalBrowserRun
-set "CHROME="
-if defined HOBLIO_CHROME_PATH (
-  if exist "!HOBLIO_CHROME_PATH!" set "CHROME=!HOBLIO_CHROME_PATH!"
-)
-if not defined CHROME if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
-  set "CHROME=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
-)
-if not defined CHROME if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" (
-  set "CHROME=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
-)
-if not defined CHROME if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
-  set "CHROME=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"
-)
-if not defined CHROME (
-  echo [setup-dev] Pulando run de browser-demo-flow ^(Chrome/Edge nao encontrado; defina HOBLIO_CHROME_PATH^).
+:FindChromiumExe
+set "CHROMIUM_EXE="
+if defined HOBLIO_CHROME_PATH if exist "!HOBLIO_CHROME_PATH!" (
+  set "CHROMIUM_EXE=!HOBLIO_CHROME_PATH!"
   goto :eof
 )
-if not defined HOBLIO_CHROME_PATH set "HOBLIO_CHROME_PATH=!CHROME!"
+if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
+  set "CHROMIUM_EXE=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
+  goto :eof
+)
+if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
+  set "CHROMIUM_EXE=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"
+  goto :eof
+)
+if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" (
+  set "CHROMIUM_EXE=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
+  goto :eof
+)
+if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
+  set "CHROMIUM_EXE=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
+  goto :eof
+)
+if exist "%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe" (
+  set "CHROMIUM_EXE=%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"
+  goto :eof
+)
+if exist "%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe" (
+  set "CHROMIUM_EXE=%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"
+  goto :eof
+)
+goto :eof
+
+:ReportChromiumForDemos
+call :FindChromiumExe
+if defined CHROMIUM_EXE (
+  echo [setup-dev] Browser p/ demos: !CHROMIUM_EXE!
+  echo   ^(runtime detecta automaticamente; HOBLIO_CHROME_PATH so se precisar override^)
+) else (
+  echo [setup-dev] AVISO: Chrome/Edge nao detectado — fluxos browser_* falham ate instalar ou HOBLIO_CHROME_PATH.
+)
+goto :eof
+
+:RunOptionalBrowserRun
+call :FindChromiumExe
+if not defined CHROMIUM_EXE (
+  echo [setup-dev] Pulando run de browser-demo-flow ^(Chrome/Edge nao encontrado^).
+  goto :eof
+)
+echo [setup-dev] browser-demo-flow ^(Chromium: !CHROMIUM_EXE!^)
 echo ^> cargo run -p hoblio-cli -- run examples\browser-demo-flow
 cargo run -p hoblio-cli -- run examples\browser-demo-flow
 if errorlevel 1 exit /b 1

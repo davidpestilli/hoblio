@@ -10,13 +10,13 @@
 | `browser_click` | `selector`, `timeout_ms?` | Clique em elemento CSS (padrão timeout 10s) |
 | `browser_fill` | `selector`, `text`, `timeout_ms?` | Foca, limpa valor, digita texto |
 | `browser_wait_for` | `selector`, `timeout_ms?` | Espera elemento existir no DOM |
-| `browser_get_text` | `selector`, `timeout_ms?`, `variable?` | Lê `innerText`; texto aparece no **summary** do log da ação (`variable` reservado para UI futura) |
+| `browser_get_text` | `selector`, `timeout_ms?`, `variable?` | Lê `innerText`; com `variable`, grava valor para `{nome}` em ações seguintes (`file_write`, `log`) |
 
 Todas as ações DOM exigem um `browser_navigate` anterior **na mesma execução** do fluxo.
 
 ## Requisito de browser (CDP)
 
-Igual ao slice 1: **chromiumoxide**, Chrome/Edge/Chromium instalado ou `HOBLIO_CHROME_PATH`.
+**chromiumoxide 0.9** + detecção automática de Chrome/Edge nos caminhos padrão do Windows (`HOBLIO_CHROME_PATH` só se precisar override).
 
 ### Limitação (este slice)
 
@@ -34,7 +34,7 @@ cargo run -p hoblio-cli -- validate examples/browser-demo-flow
 cargo run -p hoblio-cli -- run examples/browser-demo-flow
 ```
 
-Fluxo: `example.com` → `browser_wait_for` (`h1`) → `browser_get_text` → `file_write` + logs. Veja no stdout/log do Studio o summary de `browser_get_text` com o heading.
+Fluxo: `example.com` → `browser_wait_for` (`body p`) → `browser_get_text` (`variable: page_heading`) → `file_write` com `{page_heading}` → `output/heading.txt`. O site de exemplo não usa mais `<h1>`.
 
 ## Testes
 

@@ -28,7 +28,7 @@ scripts\setup-dev.bat
 
 Atalho na raiz: `setup-dev.bat` (delega para `scripts\`).
 
-O script **verifica espaço livre no C:** (~4 ou ~7 GB) **antes** de instalar ou compilar, tenta instalar **Rust** e **Node.js LTS** via `winget`, instala **Build Tools MSVC** com carga C++ (`link.exe` — **não** é o VS Code), instala o frontend do Studio, roda `cargo test` e `validate` nos exemplos. Opção **`scripts\setup-dev.bat --full`** também executa alguns fluxos de demo (browser se Chrome/Edge estiver disponível). Pré-requisitos: [guia de construção](docs/guia-construcao.md) · troubleshooting: [Windows](docs/troubleshooting-windows.md).
+O script **verifica espaço livre no C:** (~4 ou ~7 GB) **antes** de instalar ou compilar, tenta instalar **Rust** e **Node.js LTS** via `winget`, instala **Build Tools MSVC** com carga C++ (`link.exe` — **não** é o VS Code), instala o frontend do Studio, roda `cargo test` e `validate` nos exemplos, e **informa Chrome/Edge detectado** para demos browser. Opção **`scripts\setup-dev.bat --full`** também executa fluxos de demo (browser se houver Chromium). Runtime: **detecção automática** de Chrome/Edge e variáveis `{nome}` em fluxos. Pré-requisitos: [guia de construção](docs/guia-construcao.md) · troubleshooting: [Windows](docs/troubleshooting-windows.md).
 
 Depois do setup:
 

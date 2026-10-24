@@ -7,6 +7,7 @@ use hoblio_model::{FlowProject, NodeKind, validate_graph};
 use crate::actions::execute_action;
 use crate::browser::BrowserContext;
 use crate::events::{RunEvent, RunOutcome};
+use crate::variables::seed_from_project;
 
 pub fn run_project(project: &FlowProject) -> Result<RunOutcome> {
     run_project_with_listener(project, |_| {})
@@ -58,6 +59,8 @@ where
         }
     }
 
+    let mut run_vars = seed_from_project(&project.variables);
+
     let mut current = project.flow.start.as_str();
     loop {
         let node = nodes
@@ -95,7 +98,7 @@ where
                     .action
                     .as_ref()
                     .context("action node without action")?;
-                let summary = execute_action(action, browser)?;
+                let summary = execute_action(action, browser, &mut run_vars)?;
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary,

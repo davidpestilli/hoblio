@@ -2,9 +2,11 @@
 
 mod actions;
 mod browser;
+mod chromium_exe;
 mod events;
 mod exec;
 mod show_message;
+mod variables;
 
 pub use events::{RunEvent, RunOutcome};
 pub use exec::{run_project, run_project_with_listener};

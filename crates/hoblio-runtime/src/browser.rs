@@ -5,6 +5,9 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 use chromiumoxide::browser::{Browser, BrowserConfig};
+
+use crate::chromium_exe::resolve_chromium_executable;
+use crate::variables::RunVariables;
 use chromiumoxide::page::Page;
 use futures::StreamExt;
 use tokio::runtime::Runtime;
@@ -58,7 +61,10 @@ impl BrowserContext {
                     .page
                     .goto(&url)
                     .await
-                    .with_context(|| format!("navigate to {url}"))?;
+                    .with_context(|| format!("navigate to {url}"))?
+                    .wait_for_navigation()
+                    .await
+                    .with_context(|| format!("wait for navigation to {url}"))?;
             }
             let session = guard.as_ref().expect("session");
             if let Some(ms) = wait_ms {
@@ -115,27 +121,32 @@ impl BrowserContext {
         selector: &str,
         timeout_ms: Option<u64>,
         variable: Option<&str>,
+        vars: &mut RunVariables,
     ) -> Result<String> {
         let selector = selector.to_string();
         let timeout = timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS);
-        let var_note = variable
-            .filter(|v| !v.is_empty())
-            .map(|v| format!(" (variable `{v}` pending UI)"))
-            .unwrap_or_default();
-        self.rt.block_on(async {
+        let text = self.rt.block_on(async {
             let page = self.require_page().await?;
             let element = wait_for_selector(&page, &selector, timeout).await?;
-            let text = element
+            element
                 .inner_text()
                 .await
-                .context("read inner text")?
-                .unwrap_or_default();
-            let preview: String = text.chars().take(80).collect();
-            Ok(format!(
-                "browser_get_text: {selector} -> {preview}{var_note}{}",
-                if text.len() > 80 { "…" } else { "" }
-            ))
-        })
+                .context("read inner text")
+        })?
+        .unwrap_or_default();
+
+        let var_note = if let Some(name) = variable.filter(|v| !v.is_empty()) {
+            vars.insert(name.to_string(), text.clone());
+            format!(" (variable `{name}` set)")
+        } else {
+            String::new()
+        };
+
+        let preview: String = text.chars().take(80).collect();
+        Ok(format!(
+            "browser_get_text: {selector} -> {preview}{var_note}{}",
+            if text.len() > 80 { "…" } else { "" }
+        ))
     }
 
     async fn require_page(&self) -> Result<Page> {
@@ -147,16 +158,33 @@ impl BrowserContext {
     }
 }
 
+fn browser_config_builder() -> Result<BrowserConfig> {
+    let exe = resolve_chromium_executable()?;
+    BrowserConfig::builder()
+        .new_headless_mode()
+        .arg("--remote-allow-origins=*")
+        .arg("--disable-background-networking")
+        .chrome_executable(exe)
+        .build()
+        .map_err(|e| anyhow::anyhow!("invalid browser config: {e}"))
+}
+
+async fn open_page_at(browser: &Browser, url: &str) -> Result<Page> {
+    let page = browser
+        .new_page("about:blank")
+        .await
+        .context("create browser page")?;
+    page.goto(url)
+        .await
+        .with_context(|| format!("open browser page at {url}"))?;
+    Ok(page)
+}
+
 async fn launch_session(initial_url: &str) -> Result<SessionInner> {
-    let mut cfg = BrowserConfig::builder();
-    if let Ok(path) = std::env::var("HOBLIO_CHROME_PATH") {
-        cfg = cfg.chrome_executable(path);
-    }
-    let (browser, mut handler) = Browser::launch(cfg.build().map_err(|e| {
-        anyhow::anyhow!("launch Chromium (install Chrome/Chromium or set HOBLIO_CHROME_PATH): {e}")
-    })?)
-    .await
-    .context("start Chromium for CDP")?;
+    let config = browser_config_builder()?;
+    let (browser, mut handler) = Browser::launch(config)
+        .await
+        .context("start Chromium for CDP (install Chrome/Edge or set HOBLIO_CHROME_PATH)")?;
 
     let handle = tokio::spawn(async move {
         while let Some(h) = handler.next().await {
@@ -166,10 +194,7 @@ async fn launch_session(initial_url: &str) -> Result<SessionInner> {
         }
     });
 
-    let page = browser
-        .new_page(initial_url)
-        .await
-        .with_context(|| format!("open browser page at {initial_url}"))?;
+    let page = open_page_at(&browser, initial_url).await?;
 
     Ok(SessionInner {
         browser,
@@ -232,8 +257,14 @@ mod tests {
     fn browser_example_com_navigate_and_get_text() {
         let ctx = BrowserContext::new().expect("runtime");
         ctx.navigate("https://example.com", Some(300)).expect("navigate");
-        ctx.wait_for("h1", Some(15_000)).expect("wait h1");
-        let summary = ctx.get_text("h1", None, None).expect("get text");
-        assert!(summary.contains("Example Domain"), "{summary}");
+        ctx.wait_for("body p", Some(15_000)).expect("wait body paragraph");
+        let mut vars = crate::variables::RunVariables::new();
+        let summary = ctx
+            .get_text("body p", None, None, &mut vars)
+            .expect("get text");
+        assert!(
+            summary.contains("documentation examples"),
+            "{summary}"
+        );
     }
 }

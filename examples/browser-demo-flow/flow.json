@@ -31,10 +31,10 @@
     {
       "id": "wait_h1",
       "kind": "action",
-      "label": "Wait h1",
+      "label": "Wait body text",
       "action": {
         "type": "browser_wait_for",
-        "selector": "h1",
+        "selector": "body p",
         "timeout_ms": 15000
       },
       "ui": { "x": 540, "y": 0 }
@@ -42,10 +42,10 @@
     {
       "id": "get_heading",
       "kind": "action",
-      "label": "Get heading",
+      "label": "Get paragraph",
       "action": {
         "type": "browser_get_text",
-        "selector": "h1",
+        "selector": "body p",
         "variable": "page_heading"
       },
       "ui": { "x": 720, "y": 0 }
@@ -57,7 +57,7 @@
       "action": {
         "type": "file_write",
         "path": "examples/browser-demo-flow/output/heading.txt",
-        "content": "Extracted heading is in the run log (browser_get_text summary). Open Run log / CLI output for the live text."
+        "content": "{page_heading}"
       },
       "ui": { "x": 900, "y": 0 }
     },
