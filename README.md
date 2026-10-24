@@ -28,7 +28,7 @@ scripts\setup-dev.bat
 
 Atalho na raiz: `setup-dev.bat` (delega para `scripts\`).
 
-O script tenta instalar **Rust** e **Node.js LTS** via `winget`, compila o workspace, instala o frontend do Studio, roda `cargo test` e `validate` nos exemplos. Opção **`scripts\setup-dev.bat --full`** também executa alguns fluxos de demo (browser se Chrome/Edge estiver disponível). Pré-requisitos e troubleshooting: [guia de construção](docs/guia-construcao.md).
+O script tenta instalar **Rust** e **Node.js LTS** via `winget`, verifica **Build Tools MSVC** antes de compilar, instala o frontend do Studio, roda `cargo test` e `validate` nos exemplos. Opção **`scripts\setup-dev.bat --full`** também executa alguns fluxos de demo (browser se Chrome/Edge estiver disponível). Pré-requisitos: [guia de construção](docs/guia-construcao.md) · troubleshooting: [Windows](docs/troubleshooting-windows.md).
 
 Depois do setup:
 

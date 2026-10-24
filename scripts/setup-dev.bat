@@ -37,6 +37,8 @@ call :EnsureRust
 if errorlevel 1 exit /b 1
 call :EnsureNode
 if errorlevel 1 exit /b 1
+call :EnsureMsvcOrExit
+if errorlevel 1 exit /b 1
 
 echo.
 echo --- Compilando workspace Rust ---
@@ -147,6 +149,52 @@ if errorlevel 1 (
   exit /b 1
 )
 goto :eof
+
+:EnsureMsvcOrExit
+call :DetectMsvcPresent
+if not errorlevel 1 goto :eof
+echo.
+echo [setup-dev] ERRO: linker MSVC ^(link.exe / cl^) nao encontrado.
+echo Rust no Windows precisa das Visual Studio Build Tools 2022 com a carga
+echo   "Desenvolvimento para desktop com C++" ^(Desktop development with C++^).
+echo.
+echo Instalacao manual:
+echo   winget install -e --id Microsoft.VisualStudio.2022.BuildTools
+echo.
+echo Apos instalar, abra um NOVO prompt e execute este script novamente.
+echo Detalhes: docs\troubleshooting-windows.md
+echo.
+set /p "INSTALL_BT=Instalar Build Tools agora via winget? [S/N]: "
+if /i not "!INSTALL_BT!"=="S" goto msvc_exit_fail
+where winget >nul 2>&1
+if errorlevel 1 (
+  echo [setup-dev] winget indisponivel — instale as Build Tools manualmente.
+  goto msvc_exit_fail
+)
+echo [setup-dev] Iniciando winget ^(pode demorar; marque a carga C++ no instalador^)...
+winget install -e --id Microsoft.VisualStudio.2022.BuildTools --accept-source-agreements --accept-package-agreements
+call :DetectMsvcPresent
+if not errorlevel 1 (
+  echo [setup-dev] Build Tools detectadas. Se cargo build ainda falhar, reabra o terminal e rode o script de novo.
+  goto :eof
+)
+echo [setup-dev] Build Tools ainda nao detectadas. Conclua o instalador, reabra o terminal e execute este script novamente.
+:msvc_exit_fail
+pause
+exit /b 1
+
+:DetectMsvcPresent
+where link.exe >nul 2>&1
+if not errorlevel 1 exit /b 0
+where cl >nul 2>&1
+if not errorlevel 1 exit /b 0
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if exist "!VSWHERE!" (
+  for /f "usebackq tokens=* delims=" %%I in (`"!VSWHERE!" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2^>nul`) do (
+    if exist "%%I\VC\Auxiliary\Build\vcvars64.bat" exit /b 0
+  )
+)
+exit /b 1
 
 :MaybeMsvcHelpAfterFailedBuild
 where link.exe >nul 2>&1
