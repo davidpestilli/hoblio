@@ -38,14 +38,29 @@ Decisões de produto: [decisoes-produto.md](decisoes-produto.md).
 | **Node.js LTS** | Frontend do `hoblio-studio` |
 | **Chrome ou Edge (Chromium)** | Ações `browser_*` (CDP) |
 | **WebView2** | Runtime Tauri (geralmente já no Win10/11) |
+| **Espaço livre no C:** | ~**4 GB** (MSVC já ok) ou ~**7 GB** (primeira instalação C++) — ver abaixo |
 
-Problemas comuns (MSVC, browser, WebView2): [troubleshooting-windows.md](troubleshooting-windows.md).
+Problemas comuns (MSVC, browser, WebView2, disco C:): [troubleshooting-windows.md](troubleshooting-windows.md).
+
+**Importante:** **VS Code / Cursor não instalam o linker MSVC.** Rust no Windows usa `link.exe` das **Visual Studio Build Tools 2022** com a carga **Desenvolvimento para desktop com C++**. O `winget` sem a carga C++ instala só o “casco” (MSBuild), sem compilar Rust.
+
+### Espaço em disco (C:)
+
+O `setup-dev.bat` **mede o C: antes de começar** e **aborta** se faltar espaço (libere, depois rode de novo).
+
+| Situação | Mínimo no C: |
+|----------|----------------|
+| Build Tools com carga C++ **já** instaladas | ~**4 GB** |
+| Ainda falta instalar / adicionar MSVC C++ | ~**7 GB** |
+
+Parte do SDK e cache do instalador **sempre** usa o C:, mesmo com Build Tools em outro disco (`HOBLIO_VS_INSTALL_PATH`, ex. `E:\VS\BuildTools`). Com C: apertado, use também `HOBLIO_CARGO_TARGET_DIR` para o `target` do Cargo — detalhes no [troubleshooting Windows](troubleshooting-windows.md).
 
 Instalação rápida:
 
 ```powershell
 winget install Rustlang.Rustup
 winget install OpenJS.NodeJS.LTS
+winget install -e --id Microsoft.VisualStudio.2022.BuildTools --disable-interactivity --accept-package-agreements --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 rustup default stable
 ```
 
@@ -61,7 +76,7 @@ scripts\setup-dev.bat
 
 Atalho equivalente: `setup-dev.bat` na raiz (delega para `scripts\`).
 
-O script tenta instalar **Rust** e **Node.js LTS** via `winget`, **verifica Build Tools MSVC** (`link.exe` / `cl` ou `vswhere`) antes de compilar, roda `npm install` + `npm run build` no Studio, `cargo test` e `validate` nos quatro exemplos em `examples/`. Se faltar MSVC, exibe instruções (e opcionalmente `winget` para Build Tools) e **não** declara sucesso — ver [troubleshooting-windows.md](troubleshooting-windows.md).
+O script **verifica espaço livre no C:** (~4 ou ~7 GB, conforme MSVC) **antes** de prosseguir, tenta instalar **Rust** e **Node.js LTS** via `winget`, **verifica Build Tools MSVC** (`link.exe` / `cl`, `vcvars64`, `vswhere`) antes de compilar, roda `npm install` + `npm run build` no Studio, `cargo test` e `validate` nos quatro exemplos em `examples/`. Se faltar MSVC, exibe instruções (e opcionalmente `winget` com carga **VCTools**) e **não** declara sucesso — ver [troubleshooting-windows.md](troubleshooting-windows.md). Com **C:** apertado: `HOBLIO_VS_INSTALL_PATH`, `HOBLIO_CARGO_TARGET_DIR` (documentadas no troubleshooting).
 
 - **`scripts\setup-dev.bat --full`** — além do acima, executa `run` em `demo-flow`, `web-demo-flow` e `browser-demo-flow` (browser só se Chrome/Edge ou `HOBLIO_CHROME_PATH` estiver definido).
 - **Códigos de saída:** `0` sucesso; `1` falha em pré-requisito, build ou teste; `2` argumento inválido.

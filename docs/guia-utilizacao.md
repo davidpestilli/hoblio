@@ -132,8 +132,10 @@ Roadmap e decisões: [decisoes-produto.md](decisoes-produto.md).
 
 | Sintoma | O que tentar |
 |---------|----------------|
+| `setup-dev` para no início (disco C:) | Liberar ~4–7 GB no C:; ver [troubleshooting Windows](troubleshooting-windows.md) |
 | `cargo` não encontrado | Instalar rustup; reiniciar terminal |
-| Erro de linker / `link.exe` | VS Build Tools + C++ |
+| Erro de linker / `link.exe` | VS Build Tools 2022 + carga C++ (VS Code **não** basta); `setup-dev.bat` ou [troubleshooting](troubleshooting-windows.md) |
+| `no space on device` no build | `HOBLIO_CARGO_TARGET_DIR` em disco com espaço; liberar C: |
 | Browser falha | `HOBLIO_CHROME_PATH`; Chrome instalado |
 | Log duplicado no Studio | Atualize para `master` pós slice 2 (fix StrictMode) |
 | Ação browser “sem sessão” | Coloque `browser_navigate` antes dos passos DOM |
