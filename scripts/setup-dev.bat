@@ -92,6 +92,8 @@ echo.
 echo --- Validando exemplos ---
 call :ValidateExample demo-flow
 if errorlevel 1 exit /b 1
+call :ValidateExample flow-control-demo
+if errorlevel 1 exit /b 1
 call :ValidateExample web-demo-flow
 if errorlevel 1 exit /b 1
 call :ValidateExample message-timer-demo

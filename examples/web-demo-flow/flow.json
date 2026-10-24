@@ -23,7 +23,7 @@
       "label": "Write response note",
       "action": {
         "type": "file_write",
-        "path": "examples/web-demo-flow/output/example-fetch.txt",
+        "path": "output/example-fetch.txt",
         "content": "Fetched https://example.com via Hoblio web-demo-flow"
       },
       "ui": { "x": 400, "y": 0 }

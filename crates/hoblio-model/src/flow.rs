@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::action::{ActionKind, NodeKind};
+use crate::control::{ControlKind, EdgePort};
 
 pub type NodeId = String;
 
@@ -21,6 +22,8 @@ pub struct Node {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub action: Option<ActionKind>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub control: Option<ControlKind>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ui: Option<NodeUi>,
 }
 
@@ -38,8 +41,30 @@ pub struct Edge {
     pub to: NodeId,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
+    /// Logical port on the source node (`then`, `else`, `body`, `after`, or `main`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ui: Option<EdgeUi>,
+}
+
+impl Edge {
+    /// Resolved port: explicit `port`, else React Flow `source_handle`, else main.
+    pub fn resolved_port(&self) -> EdgePort {
+        if let Some(p) = &self.port {
+            if let Some(ep) = EdgePort::parse(p) {
+                return ep;
+            }
+        }
+        if let Some(ui) = &self.ui {
+            if let Some(h) = &ui.source_handle {
+                if let Some(ep) = EdgePort::parse(h) {
+                    return ep;
+                }
+            }
+        }
+        EdgePort::Main
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

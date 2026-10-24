@@ -1,0 +1,84 @@
+{
+  "start": "start",
+  "variables": {
+    "flag": "yes",
+    "items": ["alpha", "beta", "gamma"]
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "Start",
+      "ui": { "x": 40, "y": 160 }
+    },
+    {
+      "id": "check_flag",
+      "kind": "if",
+      "label": "If flag",
+      "control": {
+        "type": "if",
+        "left": "{flag}",
+        "operator": "eq",
+        "right": "yes",
+        "ignore_case": true
+      },
+      "ui": { "x": 200, "y": 160 }
+    },
+    {
+      "id": "log_then",
+      "kind": "action",
+      "label": "Then branch",
+      "action": { "type": "log", "message": "branch then" },
+      "ui": { "x": 400, "y": 80 }
+    },
+    {
+      "id": "log_else",
+      "kind": "action",
+      "label": "Else branch",
+      "action": { "type": "log", "message": "branch else" },
+      "ui": { "x": 400, "y": 260 }
+    },
+    {
+      "id": "each_item",
+      "kind": "for_each",
+      "label": "For each item",
+      "control": {
+        "type": "for_each",
+        "list_variable": "items",
+        "item_variable": "item"
+      },
+      "ui": { "x": 600, "y": 80 }
+    },
+    {
+      "id": "log_item",
+      "kind": "action",
+      "label": "Log item",
+      "action": { "type": "log", "message": "item={item}" },
+      "ui": { "x": 800, "y": 80 }
+    },
+    {
+      "id": "log_done",
+      "kind": "action",
+      "label": "Loop done",
+      "action": { "type": "log", "message": "loop finished" },
+      "ui": { "x": 800, "y": 200 }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "End",
+      "ui": { "x": 1000, "y": 160 }
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "check_flag" },
+    { "from": "check_flag", "to": "log_then", "port": "then" },
+    { "from": "check_flag", "to": "log_else", "port": "else" },
+    { "from": "log_then", "to": "each_item" },
+    { "from": "log_else", "to": "end" },
+    { "from": "each_item", "to": "log_item", "port": "body" },
+    { "from": "each_item", "to": "log_done", "port": "after" },
+    { "from": "log_item", "to": "each_item" },
+    { "from": "log_done", "to": "end" }
+  ]
+}

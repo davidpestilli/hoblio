@@ -3,7 +3,10 @@ use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 
 use crate::action::NodeKind;
+use crate::control::EdgePort;
+use crate::control::ControlKind;
 use crate::flow::{FlowGraph, NodeId};
+use crate::project::{FlowProject, ProjectVariables};
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ValidationError {
@@ -17,6 +20,12 @@ pub enum ValidationError {
     UnknownNode(NodeId),
     #[error("action node `{0}` has no action")]
     ActionNodeMissingAction(NodeId),
+    #[error("control node `{0}` has no control config")]
+    ControlNodeMissingControl(NodeId),
+    #[error("node `{0}` has action but is not an action node")]
+    NonActionHasAction(NodeId),
+    #[error("node `{0}` has control but is not a control node")]
+    NonControlHasControl(NodeId),
     #[error("start node `{0}` must not have an action")]
     StartHasAction(NodeId),
     #[error("end node `{0}` must not have outgoing edges")]
@@ -25,6 +34,18 @@ pub enum ValidationError {
     Unreachable(NodeId),
     #[error("graph has no End node")]
     MissingEnd,
+    #[error("node `{0}` has duplicate outgoing port `{1}`")]
+    DuplicateOutgoingPort(NodeId, String),
+    #[error("node `{0}` is missing required outgoing port `{1}`")]
+    MissingOutgoingPort(NodeId, String),
+    #[error("node `{0}` must not use port `{1}`")]
+    InvalidPortForNode(NodeId, String),
+    #[error("cycle detected without a for_each node (nodes: {0})")]
+    CycleWithoutForEach(String),
+    #[error("node `{0}` must be inside the body of a for_each loop")]
+    LoopControlOutsideForEach(NodeId),
+    #[error("for_each node `{0}` references unknown list variable `{1}`")]
+    UnknownListVariable(NodeId, String),
 }
 
 pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
@@ -42,7 +63,7 @@ pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
     if start.kind != NodeKind::Start {
         return Err(ValidationError::WrongStartNode(graph.start.clone()));
     }
-    if start.action.is_some() {
+    if start.action.is_some() || start.control.is_some() {
         return Err(ValidationError::StartHasAction(graph.start.clone()));
     }
 
@@ -56,14 +77,26 @@ pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
             NodeKind::Action if node.action.is_none() => {
                 return Err(ValidationError::ActionNodeMissingAction(node.id.clone()));
             }
+            NodeKind::If | NodeKind::ForEach if node.control.is_none() => {
+                return Err(ValidationError::ControlNodeMissingControl(node.id.clone()));
+            }
+            NodeKind::NextLoop | NodeKind::ExitLoop => {}
             _ => {}
+        }
+        if node.action.is_some() && node.kind != NodeKind::Action {
+            return Err(ValidationError::NonActionHasAction(node.id.clone()));
+        }
+        if node.control.is_some()
+            && !matches!(node.kind, NodeKind::If | NodeKind::ForEach)
+        {
+            return Err(ValidationError::NonControlHasControl(node.id.clone()));
         }
     }
     if !has_end {
         return Err(ValidationError::MissingEnd);
     }
 
-    let mut outgoing: HashMap<String, Vec<String>> = HashMap::new();
+    let mut outgoing: HashMap<String, Vec<(EdgePort, String)>> = HashMap::new();
     for edge in &graph.edges {
         if !by_id.contains_key(&edge.from) {
             return Err(ValidationError::UnknownNode(edge.from.clone()));
@@ -71,15 +104,38 @@ pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
         if !by_id.contains_key(&edge.to) {
             return Err(ValidationError::UnknownNode(edge.to.clone()));
         }
+        let from_node = by_id[&edge.from];
+        let port = edge.resolved_port();
+        if !port_allowed(from_node.kind, port) {
+            return Err(ValidationError::InvalidPortForNode(
+                edge.from.clone(),
+                port.as_str().into(),
+            ));
+        }
         outgoing
             .entry(edge.from.clone())
             .or_default()
-            .push(edge.to.clone());
+            .push((port, edge.to.clone()));
+    }
+
+    for (node_id, edges) in &outgoing {
+        let mut seen = HashSet::new();
+        for (port, _) in edges {
+            if !seen.insert(*port) {
+                return Err(ValidationError::DuplicateOutgoingPort(
+                    node_id.clone(),
+                    port.as_str().into(),
+                ));
+            }
+        }
     }
 
     for node in &graph.nodes {
         if node.kind == NodeKind::End && outgoing.contains_key(&node.id) {
             return Err(ValidationError::EndHasOutgoing(node.id.clone()));
+        }
+        if let Some(err) = validate_required_ports(node, outgoing.get(&node.id)) {
+            return Err(err);
         }
     }
 
@@ -90,10 +146,245 @@ pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
         }
     }
 
+    if let Some(ids) = cycle_without_for_each(graph, &by_id) {
+        return Err(ValidationError::CycleWithoutForEach(ids));
+    }
+
     Ok(())
 }
 
-fn reachable_from(start: &NodeId, outgoing: &HashMap<String, Vec<String>>) -> HashSet<String> {
+pub fn validate_project(project: &FlowProject) -> Result<(), ValidationError> {
+    validate_graph(&project.flow)?;
+    validate_for_each_list_variables(&project.flow, &project.variables)?;
+    validate_loop_controls(&project.flow)?;
+    Ok(())
+}
+
+fn validate_for_each_list_variables(
+    graph: &FlowGraph,
+    variables: &ProjectVariables,
+) -> Result<(), ValidationError> {
+    for node in &graph.nodes {
+        if node.kind != NodeKind::ForEach {
+            continue;
+        }
+        let Some(ControlKind::ForEach(cfg)) = &node.control else {
+            continue;
+        };
+        if !variables.contains_key(&cfg.list_variable) {
+            return Err(ValidationError::UnknownListVariable(
+                node.id.clone(),
+                cfg.list_variable.clone(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_loop_controls(graph: &FlowGraph) -> Result<(), ValidationError> {
+    let mut outgoing: HashMap<String, Vec<(EdgePort, String)>> = HashMap::new();
+    for edge in &graph.edges {
+        outgoing
+            .entry(edge.from.clone())
+            .or_default()
+            .push((edge.resolved_port(), edge.to.clone()));
+    }
+
+    let mut body_union = HashSet::new();
+    for node in &graph.nodes {
+        if node.kind == NodeKind::ForEach {
+            body_union.extend(for_each_body_nodes(&node.id, &outgoing));
+        }
+    }
+
+    for node in &graph.nodes {
+        if matches!(node.kind, NodeKind::NextLoop | NodeKind::ExitLoop)
+            && !body_union.contains(&node.id)
+        {
+            return Err(ValidationError::LoopControlOutsideForEach(node.id.clone()));
+        }
+    }
+    Ok(())
+}
+
+fn for_each_body_nodes(
+    for_each_id: &str,
+    outgoing: &HashMap<String, Vec<(EdgePort, String)>>,
+) -> HashSet<String> {
+    let Some(body_start) = outgoing.get(for_each_id).and_then(|edges| {
+        edges
+            .iter()
+            .find(|(port, _)| *port == EdgePort::Body)
+            .map(|(_, to)| to.clone())
+    }) else {
+        return HashSet::new();
+    };
+
+    let mut seen = HashSet::new();
+    let mut stack = vec![body_start];
+    while let Some(id) = stack.pop() {
+        if !seen.insert(id.clone()) {
+            continue;
+        }
+        if id == for_each_id {
+            continue;
+        }
+        let Some(edges) = outgoing.get(&id) else {
+            continue;
+        };
+        for (port, to) in edges {
+            if id == for_each_id && *port == EdgePort::After {
+                continue;
+            }
+            stack.push(to.clone());
+        }
+    }
+    seen
+}
+
+/// Strongly connected components with >1 node, or self-loops, must include a `for_each`.
+fn cycle_without_for_each(
+    graph: &FlowGraph,
+    by_id: &HashMap<&NodeId, &crate::flow::Node>,
+) -> Option<String> {
+    let mut adj: HashMap<String, Vec<String>> = HashMap::new();
+    for edge in &graph.edges {
+        adj.entry(edge.from.clone())
+            .or_default()
+            .push(edge.to.clone());
+        if edge.from == edge.to {
+            let node = by_id.get(&edge.from).copied()?;
+            if node.kind != NodeKind::ForEach {
+                return Some(edge.from.clone());
+            }
+        }
+    }
+
+    let mut index = 0usize;
+    let mut stack = Vec::new();
+    let mut on_stack = HashSet::new();
+    let mut indices = HashMap::new();
+    let mut lowlink = HashMap::new();
+    let mut scc_nodes: Vec<Vec<String>> = Vec::new();
+
+    fn strong_connect(
+        v: &str,
+        adj: &HashMap<String, Vec<String>>,
+        index: &mut usize,
+        stack: &mut Vec<String>,
+        on_stack: &mut HashSet<String>,
+        indices: &mut HashMap<String, usize>,
+        lowlink: &mut HashMap<String, usize>,
+        scc_nodes: &mut Vec<Vec<String>>,
+    ) {
+        indices.insert(v.to_string(), *index);
+        lowlink.insert(v.to_string(), *index);
+        *index += 1;
+        stack.push(v.to_string());
+        on_stack.insert(v.to_string());
+
+        if let Some(nexts) = adj.get(v) {
+            for w in nexts {
+                if !indices.contains_key(w) {
+                    strong_connect(
+                        w, adj, index, stack, on_stack, indices, lowlink, scc_nodes,
+                    );
+                    let lw = *lowlink.get(w).unwrap();
+                    let lv = lowlink.get_mut(v).unwrap();
+                    if lw < *lv {
+                        *lv = lw;
+                    }
+                } else if on_stack.contains(w) {
+                    let lw = *indices.get(w).unwrap();
+                    let lv = lowlink.get_mut(v).unwrap();
+                    if lw < *lv {
+                        *lv = lw;
+                    }
+                }
+            }
+        }
+
+        if lowlink.get(v) == indices.get(v) {
+            let mut component = Vec::new();
+            loop {
+                let w = stack.pop().unwrap();
+                on_stack.remove(&w);
+                component.push(w.clone());
+                if w == v {
+                    break;
+                }
+            }
+            scc_nodes.push(component);
+        }
+    }
+
+    for node in &graph.nodes {
+        if !indices.contains_key(&node.id) {
+            strong_connect(
+                &node.id,
+                &adj,
+                &mut index,
+                &mut stack,
+                &mut on_stack,
+                &mut indices,
+                &mut lowlink,
+                &mut scc_nodes,
+            );
+        }
+    }
+
+    for component in scc_nodes {
+        if component.len() <= 1 {
+            continue;
+        }
+        let has_for_each = component.iter().any(|id| {
+            by_id
+                .get(id)
+                .map(|n| n.kind == NodeKind::ForEach)
+                .unwrap_or(false)
+        });
+        if !has_for_each {
+            return Some(component.join(", "));
+        }
+    }
+    None
+}
+
+fn port_allowed(kind: NodeKind, port: EdgePort) -> bool {
+    match kind {
+        NodeKind::Start | NodeKind::Action | NodeKind::NextLoop | NodeKind::ExitLoop => {
+            port == EdgePort::Main
+        }
+        NodeKind::End => false,
+        NodeKind::If => matches!(port, EdgePort::Then | EdgePort::Else),
+        NodeKind::ForEach => matches!(port, EdgePort::Body | EdgePort::After),
+    }
+}
+
+fn validate_required_ports(
+    node: &crate::flow::Node,
+    edges: Option<&Vec<(EdgePort, String)>>,
+) -> Option<ValidationError> {
+    let ports: HashSet<EdgePort> = edges
+        .map(|e| e.iter().map(|(p, _)| *p).collect())
+        .unwrap_or_default();
+    let need = match node.kind {
+        NodeKind::If => [EdgePort::Then, EdgePort::Else],
+        NodeKind::ForEach => [EdgePort::Body, EdgePort::After],
+        _ => return None,
+    };
+    for port in need {
+        if !ports.contains(&port) {
+            return Some(ValidationError::MissingOutgoingPort(
+                node.id.clone(),
+                port.as_str().into(),
+            ));
+        }
+    }
+    None
+}
+
+fn reachable_from(start: &NodeId, outgoing: &HashMap<String, Vec<(EdgePort, String)>>) -> HashSet<String> {
     let mut seen = HashSet::new();
     let mut stack = vec![start.clone()];
     while let Some(id) = stack.pop() {
@@ -101,7 +392,7 @@ fn reachable_from(start: &NodeId, outgoing: &HashMap<String, Vec<String>>) -> Ha
             continue;
         }
         if let Some(nexts) = outgoing.get(&id) {
-            stack.extend(nexts.iter().cloned());
+            stack.extend(nexts.iter().map(|(_, to)| to.clone()));
         }
     }
     seen
@@ -111,6 +402,7 @@ fn reachable_from(start: &NodeId, outgoing: &HashMap<String, Vec<String>>) -> Ha
 mod tests {
     use super::*;
     use crate::action::{ActionKind, LogAction, NodeKind};
+    use crate::control::{CompareOperator, ControlKind, IfControl};
     use crate::flow::{Edge, FlowGraph, Node};
 
     fn demo() -> FlowGraph {
@@ -122,6 +414,7 @@ mod tests {
                     kind: NodeKind::Start,
                     label: Some("Start".into()),
                     action: None,
+                    control: None,
                     ui: None,
                 },
                 Node {
@@ -131,6 +424,7 @@ mod tests {
                     action: Some(ActionKind::Log(LogAction {
                         message: "a".into(),
                     })),
+                    control: None,
                     ui: None,
                 },
                 Node {
@@ -138,6 +432,7 @@ mod tests {
                     kind: NodeKind::End,
                     label: Some("End".into()),
                     action: None,
+                    control: None,
                     ui: None,
                 },
             ],
@@ -147,6 +442,7 @@ mod tests {
                     from: "start".into(),
                     to: "log1".into(),
                     label: None,
+                    port: None,
                     ui: None,
                 },
                 Edge {
@@ -154,6 +450,7 @@ mod tests {
                     from: "log1".into(),
                     to: "end".into(),
                     label: None,
+                    port: None,
                     ui: None,
                 },
             ],
@@ -163,5 +460,49 @@ mod tests {
     #[test]
     fn valid_demo() {
         validate_graph(&demo()).unwrap();
+    }
+
+    #[test]
+    fn if_requires_then_and_else() {
+        let mut g = demo();
+        g.nodes.insert(
+            2,
+            Node {
+                id: "cond".into(),
+                kind: NodeKind::If,
+                label: Some("If".into()),
+                action: None,
+                control: Some(ControlKind::If(IfControl {
+                    left: "flag".into(),
+                    operator: CompareOperator::Eq,
+                    right: "yes".into(),
+                    ignore_case: false,
+                })),
+                ui: None,
+            },
+        );
+        g.edges = vec![
+            Edge {
+                id: None,
+                from: "start".into(),
+                to: "cond".into(),
+                label: None,
+                port: None,
+                ui: None,
+            },
+            Edge {
+                id: None,
+                from: "cond".into(),
+                to: "log1".into(),
+                label: None,
+                port: Some("then".into()),
+                ui: None,
+            },
+        ];
+        assert!(matches!(
+            validate_graph(&g),
+            Err(ValidationError::MissingOutgoingPort(id, port))
+                if id == "cond" && port == "else"
+        ));
     }
 }

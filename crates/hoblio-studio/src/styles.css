@@ -40,6 +40,11 @@ body,
   font-size: 0.9rem;
 }
 
+.toolbar .status.status-error {
+  color: #fecaca;
+  opacity: 1;
+}
+
 .toolbar .path {
   font-size: 0.75rem;
   opacity: 0.7;
@@ -75,6 +80,20 @@ body,
   text-align: left;
 }
 
+.palette-group {
+  margin: 0.5rem 0 0.35rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.properties .checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .properties label {
   display: flex;
   flex-direction: column;
@@ -93,6 +112,18 @@ body,
 .properties .hint {
   font-size: 0.8rem;
   color: #6b7280;
+}
+
+.properties .variables-editor {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8rem;
+  min-height: 8rem;
+}
+
+.properties .variables-error {
+  color: #b91c1c;
+  font-size: 0.8rem;
+  margin: 0;
 }
 
 .properties .props-delete {
@@ -272,15 +303,35 @@ body,
   margin: 0.5rem 0;
 }
 
+.log-shell {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 72px;
+  max-height: min(50vh, 480px);
+  border-top: 1px solid #cbd5e1;
+}
+
+.log-resize-handle {
+  flex-shrink: 0;
+  height: 6px;
+  cursor: ns-resize;
+  background: linear-gradient(to bottom, #e5e7eb, #d1d5db);
+}
+
+.log-resize-handle:hover {
+  background: #93c5fd;
+}
+
 .log-panel {
-  height: 140px;
-  border-top: 1px solid #e5e7eb;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   background: #0f172a;
   color: #e2e8f0;
   padding: 0.5rem 0.75rem;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 .log-panel-header {
@@ -358,6 +409,47 @@ body,
 
 .hoblio-node.kind-end {
   border-color: #dc2626;
+}
+
+.hoblio-node.kind-if {
+  border-color: #7c3aed;
+  background: #faf5ff;
+}
+
+.hoblio-node.kind-for_each {
+  border-color: #0d9488;
+  background: #f0fdfa;
+}
+
+.hoblio-node.kind-next_loop,
+.hoblio-node.kind-exit_loop {
+  border-color: #d97706;
+  background: #fffbeb;
+}
+
+.hoblio-node-ports {
+  margin-top: 0.35rem;
+  font-size: 0.65rem;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.hoblio-handle-source.port-then {
+  background: #16a34a;
+}
+
+.hoblio-handle-source.port-else {
+  background: #dc2626;
+}
+
+.hoblio-handle-source.port-body {
+  background: #2563eb;
+}
+
+.hoblio-handle-source.port-after {
+  background: #64748b;
 }
 
 .hoblio-node-title {

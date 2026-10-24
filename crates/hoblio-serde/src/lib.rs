@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
-use hoblio_model::{FlowGraph, FlowManifest, FlowProject, ProjectVariables, validate_graph};
+use hoblio_model::{FlowGraph, FlowManifest, FlowProject, ProjectVariables, validate_project};
 use serde_json::Value;
 
 pub const MANIFEST_FILE: &str = "manifest.json";
@@ -74,7 +74,7 @@ pub fn save_project(dir: impl AsRef<Path>, project: &FlowProject) -> Result<()> 
         format!("create project dir {}", layout.root.display())
     })?;
 
-    write_json_pretty(&layout.manifest_path, &project.manifest)?;
+    write_json_if_changed(&layout.manifest_path, &project.manifest)?;
     write_flow(&layout.flow_path, &project.flow, &project.variables)?;
     Ok(())
 }
@@ -94,7 +94,26 @@ fn write_flow(path: &Path, flow: &FlowGraph, variables: &ProjectVariables) -> Re
 
 pub fn validate_project_dir(dir: impl AsRef<Path>) -> Result<()> {
     let project = load_project(dir)?;
-    validate_graph(&project.flow).map_err(|e| anyhow::anyhow!(e))
+    validate_project(&project).map_err(|e| anyhow::anyhow!(e))
+}
+
+fn write_json_if_changed(path: &Path, value: &impl serde::Serialize) -> Result<()> {
+    let text = serde_json::to_string_pretty(value).context("json encode")?;
+    let new_bytes = format!("{text}\n").into_bytes();
+    if path.is_file() {
+        if let Ok(existing) = fs::read_to_string(path) {
+            let existing_value: Result<Value, _> = serde_json::from_str(&existing);
+            let new_value: Result<Value, _> = serde_json::from_str(&text);
+            if let (Ok(a), Ok(b)) = (existing_value, new_value) {
+                if a == b {
+                    return Ok(());
+                }
+            } else if existing.as_bytes() == new_bytes.as_slice() {
+                return Ok(());
+            }
+        }
+    }
+    fs::write(path, new_bytes).with_context(|| format!("write {}", path.display()))
 }
 
 fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T> {

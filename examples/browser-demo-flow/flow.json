@@ -56,7 +56,7 @@
       "label": "Write file",
       "action": {
         "type": "file_write",
-        "path": "examples/browser-demo-flow/output/heading.txt",
+        "path": "output/heading.txt",
         "content": "{page_heading}"
       },
       "ui": { "x": 900, "y": 0 }

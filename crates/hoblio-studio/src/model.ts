@@ -1,4 +1,19 @@
-export type NodeKind = "start" | "action" | "end";
+export type NodeKind =
+  | "start"
+  | "action"
+  | "end"
+  | "if"
+  | "for_each"
+  | "next_loop"
+  | "exit_loop";
+
+export type CompareOperator = "eq" | "ne" | "contains";
+
+export type ControlKind =
+  | { type: "if"; left: string; operator: CompareOperator; right: string; ignore_case?: boolean }
+  | { type: "for_each"; list_variable: string; item_variable: string };
+
+export type EdgePort = "main" | "then" | "else" | "body" | "after";
 
 export type ActionKind =
   | { type: "log"; message: string }
@@ -17,6 +32,7 @@ export interface FlowNode {
   kind: NodeKind;
   label?: string;
   action?: ActionKind;
+  control?: ControlKind;
   ui?: { x: number; y: number };
 }
 
@@ -30,6 +46,7 @@ export interface FlowEdge {
   from: string;
   to: string;
   label?: string;
+  port?: EdgePort;
   ui?: {
     waypoints?: Waypoint[];
     sourceHandle?: string;
@@ -95,6 +112,28 @@ export function actionLabel(action: ActionKind): string {
     case "show_message":
       return "ShowMessage";
   }
+}
+
+export function controlLabel(kind: NodeKind): string {
+  switch (kind) {
+    case "if":
+      return "If";
+    case "for_each":
+      return "ForEach";
+    case "next_loop":
+      return "NextLoop";
+    case "exit_loop":
+      return "ExitLoop";
+    default:
+      return kind;
+  }
+}
+
+export function defaultControl(kind: "if" | "for_each"): ControlKind {
+  if (kind === "if") {
+    return { type: "if", left: "{flag}", operator: "eq", right: "yes", ignore_case: true };
+  }
+  return { type: "for_each", list_variable: "items", item_variable: "item" };
 }
 
 export function defaultAction(type: ActionKind["type"]): ActionKind {

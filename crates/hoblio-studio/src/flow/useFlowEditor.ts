@@ -5,15 +5,22 @@ import {
   useNodesState,
   type Connection,
   type EdgeChange,
+  type FinalConnectionState,
   type OnEdgesChange,
   type OnNodesChange,
 } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { flowToGraph, graphToFlow, newActionNodeId, type HoblioNodeData } from "../flowConvert";
-import type { ActionKind, FlowGraph, FlowNode, FlowProject } from "../model";
-import { defaultAction } from "../model";
+import {
+  flowToGraph,
+  graphToFlow,
+  newActionNodeId,
+  parseEdgePort,
+  sourceHandleKey,
+} from "../flowConvert";
+import type { ActionKind, FlowGraph, FlowNode, FlowProject, NodeKind } from "../model";
+import { defaultAction, defaultControl } from "../model";
 import type { HoblioFlowEdge, HoblioFlowNode } from "./flowTypes";
 import { newEdgeId } from "./flowTypes";
 import type { Waypoint } from "../model";
@@ -48,13 +55,25 @@ function snapshotsEqual(a: CanvasSnapshot, b: CanvasSnapshot): boolean {
 }
 
 function defaultEdge(connection: Connection, id: string): HoblioFlowEdge {
+  const rawHandle =
+    typeof connection.sourceHandle === "string" ? connection.sourceHandle : undefined;
+  const port = parseEdgePort(rawHandle);
+  const sourceHandle = port && port !== "main" ? port : rawHandle ?? "right";
   return {
     ...connection,
     id,
     type: "waypoint",
+    sourceHandle,
+    label: undefined,
     markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
     data: {
-      flowEdge: { id, from: connection.source!, to: connection.target! },
+      flowEdge: {
+        id,
+        from: connection.source!,
+        to: connection.target!,
+        port,
+        label: port && port !== "main" ? port : undefined,
+      },
       waypoints: [],
     },
   };
@@ -69,6 +88,7 @@ export interface FlowEditorController {
   onNodesChange: OnNodesChange<HoblioFlowNode>;
   onEdgesChange: OnEdgesChange<HoblioFlowEdge>;
   onConnect: (connection: Connection) => void;
+  onConnectEnd: (connectionState: FinalConnectionState) => void;
   onReconnect: (edge: HoblioFlowEdge, connection: Connection) => void;
   isValidConnection: (connection: Connection) => boolean;
   selectedEdgeId: string | null;
@@ -82,15 +102,24 @@ export interface FlowEditorController {
   undo: () => void;
   redo: () => void;
   loadProject: (project: FlowProject) => void;
+  fitViewToken: number;
   toFlowGraph: () => FlowGraph;
+  onConnectionRejected?: (message: string) => void;
   addAction: (type: ActionKind["type"]) => void;
+  addControlNode: (kind: Extract<NodeKind, "if" | "for_each" | "next_loop" | "exit_loop">) => void;
   addEndNode: () => void;
   deleteSelection: () => void;
   deleteNode: (nodeId: string) => void;
-  updateFlowNode: (flowNode: FlowNode) => void;
+  updateFlowNode: (flowNode: FlowNode, options?: { recordHistory?: boolean }) => void;
 }
 
-export function useFlowEditor(initialProject: FlowProject): FlowEditorController {
+export function useFlowEditor(
+  initialProject: FlowProject,
+  options?: {
+    onConnectionRejected?: (message: string) => void;
+    onConnectionNotice?: (message: string) => void;
+  },
+): FlowEditorController {
   const initial = useMemo(() => graphToFlow(initialProject.flow), []);
   const [start, setStart] = useState(initialProject.flow.start);
   const [nodes, setNodes, applyNodeChanges] = useNodesState<HoblioFlowNode>(initial.nodes);
@@ -103,6 +132,10 @@ export function useFlowEditor(initialProject: FlowProject): FlowEditorController
   }));
 
   const snapshotRef = useRef<CanvasSnapshot>({ nodes: initial.nodes, edges: initial.edges, start: initialProject.flow.start });
+  const spawnOffsetRef = useRef(0);
+  const [fitViewToken, setFitViewToken] = useState(0);
+  const onConnectionRejected = options?.onConnectionRejected;
+  const onConnectionNotice = options?.onConnectionNotice;
 
   useEffect(() => {
     snapshotRef.current = { nodes, edges, start };
@@ -163,6 +196,8 @@ export function useFlowEditor(initialProject: FlowProject): FlowEditorController
       };
       applySnapshot(snapshot);
       setHistory({ items: [cloneSnapshot(snapshot)], index: 0 });
+      spawnOffsetRef.current = 0;
+      setFitViewToken((t) => t + 1);
     },
     [applySnapshot],
   );
@@ -174,40 +209,112 @@ export function useFlowEditor(initialProject: FlowProject): FlowEditorController
     [nodes],
   );
 
-  const isValidConnection = useCallback(
-    (connection: Connection) => {
+  const connectionRejectReason = useCallback(
+    (connection: Connection): string | null => {
       const source = nodeById(connection.source);
       const target = nodeById(connection.target);
+      if (!connection.source || !connection.target) {
+        return null;
+      }
       if (!source || !target) {
-        return false;
+        return "Connection not allowed";
       }
       if (source.data.flowNode.kind === "end") {
-        return false;
+        return "Cannot connect from an End node";
       }
       if (target.data.flowNode.kind === "start") {
-        return false;
+        return "Cannot connect to Start";
       }
       if (connection.source === connection.target) {
-        return false;
+        return "Cannot connect a node to itself";
       }
-      return true;
+      return null;
     },
     [nodeById],
   );
 
+  const isValidConnection = useCallback(
+    (connection: Connection) => connectionRejectReason(connection) === null,
+    [connectionRejectReason],
+  );
+
+  const rejectConnection = useCallback(
+    (_connection: Connection, reason: string) => {
+      onConnectionRejected?.(reason);
+    },
+    [onConnectionRejected],
+  );
+
   const onConnect = useCallback(
     (connection: Connection) => {
-      if (!isValidConnection(connection)) {
+      const rejectReason = connectionRejectReason(connection);
+      if (rejectReason) {
+        rejectConnection(connection, rejectReason);
         return;
       }
       const id = newEdgeId();
+      const sourceNode = nodeById(connection.source);
+      let replacedExisting = false;
       setEdges((current) => {
-        const withoutDuplicateSource = current.filter((edge) => edge.source !== connection.source);
+        const sourceKind = sourceNode?.data.flowNode.kind ?? "action";
+        const handle = sourceHandleKey(
+          sourceKind,
+          typeof connection.sourceHandle === "string" ? connection.sourceHandle : undefined,
+        );
+        const withoutDuplicateSource = current.filter((edge) => {
+          if (edge.source !== connection.source) {
+            return true;
+          }
+          const edgeKind = nodeById(edge.source)?.data.flowNode.kind ?? "action";
+          const edgeHandle = sourceHandleKey(
+            edgeKind,
+            typeof edge.sourceHandle === "string" ? edge.sourceHandle : undefined,
+          );
+          if (edgeHandle === handle) {
+            replacedExisting = true;
+            return false;
+          }
+          return true;
+        });
         return addEdge(defaultEdge(connection, id), withoutDuplicateSource);
       });
+      if (replacedExisting) {
+        onConnectionNotice?.("Replaced existing connection from this output");
+      }
       commitHistory();
     },
-    [commitHistory, isValidConnection, setEdges],
+    [
+      commitHistory,
+      connectionRejectReason,
+      nodeById,
+      onConnectionNotice,
+      rejectConnection,
+      setEdges,
+    ],
+  );
+
+  const onConnectEnd = useCallback(
+    (connectionState: FinalConnectionState) => {
+      if (connectionState.isValid !== false) {
+        return;
+      }
+      const from = connectionState.fromNode;
+      const to = connectionState.toNode;
+      if (!from || !to) {
+        return;
+      }
+      const connection: Connection = {
+        source: from.id,
+        target: to.id,
+        sourceHandle: connectionState.fromHandle?.id ?? null,
+        targetHandle: connectionState.toHandle?.id ?? null,
+      };
+      const reason = connectionRejectReason(connection);
+      if (reason) {
+        rejectConnection(connection, reason);
+      }
+    },
+    [connectionRejectReason, rejectConnection],
   );
 
   const onReconnect = useCallback(
@@ -222,19 +329,26 @@ export function useFlowEditor(initialProject: FlowProject): FlowEditorController
             return item;
           }
           const flowEdge = item.data?.flowEdge;
+          const sourceHandle =
+            typeof connection.sourceHandle === "string"
+              ? connection.sourceHandle
+              : flowEdge?.ui?.sourceHandle;
+          const port = parseEdgePort(
+            typeof sourceHandle === "string" ? sourceHandle : undefined,
+          );
           return {
             ...item,
+            label: port && port !== "main" ? port : item.label,
             data: {
               flowEdge: {
                 ...flowEdge,
                 from: item.source,
                 to: item.target,
+                port,
+                label: port && port !== "main" ? port : flowEdge?.label,
                 ui: {
                   ...flowEdge?.ui,
-                  sourceHandle:
-                    typeof connection.sourceHandle === "string"
-                      ? connection.sourceHandle
-                      : flowEdge?.ui?.sourceHandle,
+                  sourceHandle,
                   targetHandle:
                     typeof connection.targetHandle === "string"
                       ? connection.targetHandle
@@ -245,18 +359,24 @@ export function useFlowEditor(initialProject: FlowProject): FlowEditorController
             },
           };
         });
-        const sources = new Set<string>();
+        const sourceHandles = new Set<string>();
         return next.filter((item) => {
-          if (sources.has(item.source)) {
+          const edgeKind = nodeById(item.source)?.data.flowNode.kind ?? "action";
+          const handle = sourceHandleKey(
+            edgeKind,
+            typeof item.sourceHandle === "string" ? item.sourceHandle : undefined,
+          );
+          const key = `${item.source}:${handle}`;
+          if (sourceHandles.has(key)) {
             return false;
           }
-          sources.add(item.source);
+          sourceHandles.add(key);
           return true;
         });
       });
       commitHistory();
     },
-    [commitHistory, isValidConnection, setEdges],
+    [commitHistory, isValidConnection, nodeById, setEdges],
   );
 
   const onEdgesChange = useCallback<OnEdgesChange<HoblioFlowEdge>>(
@@ -347,20 +467,49 @@ export function useFlowEditor(initialProject: FlowProject): FlowEditorController
     [setEdges],
   );
 
+  const addControlNode = useCallback(
+    (kind: Extract<NodeKind, "if" | "for_each" | "next_loop" | "exit_loop">) => {
+      const id = `${kind}_${Date.now().toString(36)}`;
+      const offset = spawnOffsetRef.current++ * 28;
+      const x = 280 + offset;
+      const y = 200 + offset;
+      const flowNode: FlowNode = {
+        id,
+        kind,
+        label: kind === "for_each" ? "For each" : kind === "if" ? "If" : kind.replace("_", " "),
+        control:
+          kind === "if" || kind === "for_each" ? defaultControl(kind) : undefined,
+        ui: { x, y },
+      };
+      const node: HoblioFlowNode = {
+        id,
+        type: "hoblio",
+        position: { x, y },
+        data: { flowNode },
+      };
+      setNodes((current) => [...current, node]);
+      commitHistory();
+    },
+    [commitHistory, setNodes],
+  );
+
   const addAction = useCallback(
     (type: ActionKind["type"]) => {
       const id = newActionNodeId();
+      const offset = spawnOffsetRef.current++ * 28;
+      const x = 240 + offset;
+      const y = 240 + offset;
       const flowNode: FlowNode = {
         id,
         kind: "action",
         label: type.replace(/_/g, " "),
         action: defaultAction(type),
-        ui: { x: 240, y: 240 },
+        ui: { x, y },
       };
       const node: HoblioFlowNode = {
         id,
         type: "hoblio",
-        position: { x: 240, y: 240 },
+        position: { x, y },
         data: { flowNode },
       };
       setNodes((current) => [...current, node]);
@@ -388,14 +537,17 @@ export function useFlowEditor(initialProject: FlowProject): FlowEditorController
   }, [commitHistory, setNodes]);
 
   const updateFlowNode = useCallback(
-    (flowNode: FlowNode) => {
+    (flowNode: FlowNode, options?: { recordHistory?: boolean }) => {
       setNodes((current) =>
         current.map((node) =>
           node.id === flowNode.id ? { ...node, data: { ...node.data, flowNode } } : node,
         ),
       );
+      if (options?.recordHistory !== false) {
+        commitHistory();
+      }
     },
-    [setNodes],
+    [commitHistory, setNodes],
   );
 
   const deleteNode = useCallback(
@@ -446,6 +598,7 @@ export function useFlowEditor(initialProject: FlowProject): FlowEditorController
     onNodesChange,
     onEdgesChange,
     onConnect,
+    onConnectEnd,
     onReconnect,
     isValidConnection,
     selectedEdgeId,
@@ -459,8 +612,10 @@ export function useFlowEditor(initialProject: FlowProject): FlowEditorController
     undo,
     redo,
     loadProject,
+    fitViewToken,
     toFlowGraph,
     addAction,
+    addControlNode,
     addEndNode,
     deleteSelection,
     deleteNode,

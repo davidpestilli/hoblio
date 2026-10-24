@@ -10,7 +10,11 @@ pub fn seed_from_project(values: &ProjectVariables) -> RunVariables {
     for (key, value) in values {
         if let Some(s) = value.as_str() {
             vars.insert(key.clone(), s.to_string());
-        } else if value.is_string() || value.is_number() || value.is_boolean() {
+        } else if value.is_array() || value.is_object() {
+            if let Ok(json) = serde_json::to_string(value) {
+                vars.insert(key.clone(), json);
+            }
+        } else if value.is_number() || value.is_boolean() {
             vars.insert(key.clone(), value.to_string());
         }
     }

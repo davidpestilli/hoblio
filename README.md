@@ -8,7 +8,7 @@ Hoblio é um **designer de fluxos local** (estilo RPA desktop leve): você monta
 
 **Stack:** Rust (runtime + CLI) · Tauri 2 + React + React Flow (Studio).
 
-**Estado:** MVP em progresso (Studio com editor de fluxo completo, browser CDP, arquivos, HTTP) — slices em `docs/fase-mvp-slice*.md` (último: [slice 4 — flow editor](docs/fase-mvp-slice4-flow-editor.md)).
+**Estado:** MVP em progresso — editor flowchart, **If / ForEach**, browser CDP, arquivos, HTTP. Último slice: [5 — controle de fluxo](docs/fase-mvp-slice5-flow-control.md) (ver também [slice 4 — editor](docs/fase-mvp-slice4-flow-editor.md)).
 
 ## Documentação
 
@@ -16,7 +16,7 @@ Hoblio é um **designer de fluxos local** (estilo RPA desktop leve): você monta
 - [Guia de construção](docs/guia-construcao.md) — compilar, testes, `scripts/setup-dev.bat` e estender o sistema
 - [Decisões de produto](docs/decisoes-produto.md)
 
-Outros: [estudo de viabilidade](docs/estudo-viabilidade.md) · [fase 0](docs/fase-0.md) · slices MVP em `docs/fase-mvp-slice*.md`
+Outros: [estudo de viabilidade](docs/estudo-viabilidade.md) · [fase 0](docs/fase-0.md) · slices MVP em `docs/fase-mvp-slice*.md` · regressão: `scripts/eval-flow-control.ps1`
 
 ## Início rápido (Windows)
 
@@ -42,7 +42,8 @@ npm run tauri dev
 ```powershell
 cargo build
 cargo run -p hoblio-cli -- validate examples/demo-flow
-cargo run -p hoblio-cli -- run examples/demo-flow
+cargo run -p hoblio-cli -- run examples/flow-control-demo
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
 ```
 
 Logs JSONL opcionais: `cargo run -p hoblio-cli -- run examples/demo-flow --jsonl`

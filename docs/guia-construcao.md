@@ -1,8 +1,8 @@
 # Hoblio — Guia de construção e desenvolvimento
 
-Documento consolidado para **montar, compilar e estender** o sistema. Estado reflete o repo em `master` após slice 3 (browser).
+Documento consolidado para **montar, compilar e estender** o sistema. Estado reflete o repo em `master` após **slice 5** (controle de fluxo If/ForEach + Studio).
 
-Para histórico por entrega, veja também: [Fase 0](fase-0.md), [Slice 1](fase-mvp-slice1.md), [Slice 2](fase-mvp-slice2.md), [Slice 3 browser](fase-mvp-slice3-browser.md).
+Para histórico por entrega, veja também: [Fase 0](fase-0.md), [Slice 1](fase-mvp-slice1.md) · [2](fase-mvp-slice2.md) · [3 browser](fase-mvp-slice3-browser.md) · [4 flow editor](fase-mvp-slice4-flow-editor.md) · **[5 flow control](fase-mvp-slice5-flow-control.md)**.
 
 ---
 
@@ -11,7 +11,7 @@ Para histórico por entrega, veja também: [Fase 0](fase-0.md), [Slice 1](fase-m
 ```
 Hoblio/
 ├── crates/
-│   ├── hoblio-model/      # Grafo, nós, ActionKind, validação
+│   ├── hoblio-model/      # Grafo, nós, ActionKind, ControlKind, validate_graph / validate_project
 │   ├── hoblio-serde/      # load/save pasta de projeto
 │   ├── hoblio-runtime/    # Executor + ações (HTTP, arquivo, browser CDP, Win32…)
 │   ├── hoblio-log/        # tracing + JSONL opcional
@@ -23,7 +23,7 @@ Hoblio/
 
 - **Runtime 100% Rust** — compartilhado pelo CLI e pelo Studio (Tauri chama o mesmo código).
 - **Studio** — shell WebView2; editor flowchart; não é VS Code/Cursor.
-- **Persistência** — pasta de projeto com `manifest.json` + `flow.json` (JSON, grafo DAG).
+- **Persistência** — pasta de projeto com `manifest.json` + `flow.json` (JSON; grafo com ramificações If e loops ForEach).
 
 Decisões de produto: [decisoes-produto.md](decisoes-produto.md).
 
@@ -76,7 +76,7 @@ scripts\setup-dev.bat
 
 Atalho equivalente: `setup-dev.bat` na raiz (delega para `scripts\`).
 
-O script **verifica espaço livre no C:** (~4 ou ~7 GB, conforme MSVC) **antes** de prosseguir, tenta instalar **Rust** e **Node.js LTS** via `winget`, **verifica Build Tools MSVC** (`link.exe` / `cl`, `vcvars64`, `vswhere`) antes de compilar, roda `npm install` + `npm run build` no Studio, `cargo test` e `validate` nos quatro exemplos em `examples/`. Se faltar MSVC, exibe instruções (e opcionalmente `winget` com carga **VCTools**) e **não** declara sucesso — ver [troubleshooting-windows.md](troubleshooting-windows.md). Com **C:** apertado: `HOBLIO_VS_INSTALL_PATH`, `HOBLIO_CARGO_TARGET_DIR` (documentadas no troubleshooting).
+O script **verifica espaço livre no C:** (~4 ou ~7 GB, conforme MSVC) **antes** de prosseguir, tenta instalar **Rust** e **Node.js LTS** via `winget`, **verifica Build Tools MSVC** (`link.exe` / `cl`, `vcvars64`, `vswhere`) antes de compilar, roda `npm install` + `npm run build` no Studio (`tsc --noEmit` + Vite), `cargo test` e `validate` nos exemplos em `examples/` (incl. `flow-control-demo`). Se faltar MSVC, exibe instruções (e opcionalmente `winget` com carga **VCTools**) e **não** declara sucesso — ver [troubleshooting-windows.md](troubleshooting-windows.md). Com **C:** apertado: `HOBLIO_VS_INSTALL_PATH`, `HOBLIO_CARGO_TARGET_DIR` (documentadas no troubleshooting).
 
 - **`scripts\setup-dev.bat --full`** — além do acima, executa `run` em `demo-flow`, `web-demo-flow` e `browser-demo-flow` (browser se Chrome/Edge for detectado nos caminhos padrão).
 - Após **`git pull`**, rode `setup-dev.bat` de novo (ou `cargo build` + `npm run build` no Studio) para alinhar binários com o código.
@@ -134,23 +134,50 @@ Implementação em `crates/hoblio-studio/src/flow/` (React Flow 12), inspirada n
 
 | Módulo | Função |
 |--------|--------|
-| `useFlowEditor.ts` | Estado do canvas, undo/redo, connect/reconnect, apagar nós/arestas |
+| `useFlowEditor.ts` | Canvas, undo/redo, multi-port connect, `onConnectEnd` (feedback), Stop/cancel no run |
 | `FlowCanvas.tsx` | React Flow, guias de alinhamento, tecla Delete |
 | `FlowToolbar.tsx` | Exibição/Edição, desfazer/refazer, rótulo da aresta selecionada |
 | `WaypointEdge.tsx` | Tracado com pontos de passagem |
 | `flowConvert.ts` | Conversão `flow.json` ↔ nós/arestas do React Flow |
 
-Detalhes do slice: [fase-mvp-slice4-flow-editor.md](fase-mvp-slice4-flow-editor.md).
+Detalhes: [slice 4](fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEach](fase-mvp-slice5-flow-control.md).
+
+Build frontend:
+
+```powershell
+cd crates/hoblio-studio
+npm run build   # tsc --noEmit && vite build
+```
+
+Ícone Tauri (`src-tauri/icons/icon.png`) deve ser **RGBA** (build Linux/macOS).
 
 ---
 
-## 4.1 Browser (CDP), variáveis e `setup-dev`
+## 4.1 Controle de fluxo (slice 5)
+
+| Peça | Função |
+|------|--------|
+| **`validate_project`** | Grafo + variáveis (listas ForEach, next/exit dentro do corpo) |
+| **`examples/flow-control-demo`** | If + ForEach + variáveis `flag` / `items` |
+| **`scripts/eval-flow-control.ps1`** | Harness Grok/CI — esperado **21 PASS, 0 FAIL** |
+| **Docs de avaliação** | [eval-grok-flow-control.md](eval-grok-flow-control.md), [eval-grok-retest-priorities.md](eval-grok-retest-priorities.md) |
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
+```
+
+Runtime: `cargo test -p hoblio-runtime --lib` (evita testes de browser opcionais no harness).
+
+---
+
+## 4.2 Browser (CDP), variáveis e `setup-dev`
 
 | Tópico | Detalhe |
 |--------|---------|
 | **Biblioteca** | `chromiumoxide` **0.9** (CDP compatível com Chrome/Edge recentes) |
 | **Executável** | Detecção automática de `chrome.exe` / `msedge.exe` (`crates/hoblio-runtime/src/chromium_exe.rs`) — caminhos padrão Windows, como RPA desktop (ex. Power Automate). Override: `HOBLIO_CHROME_PATH` |
-| **Variáveis de execução** | `browser_get_text` + campo `variable` grava texto; `file_write` e `log` interpolam `{nome}` (ex.: `{page_heading}`) |
+| **Variáveis** | Em `flow.json` → `variables`; Studio edita JSON no painel direito (sem nó selecionado). Runtime: `browser_get_text`, ForEach, interpolação `{nome}` em `log` / `file_write` |
+| **Caminhos `file_write`** | Relativos à **pasta do projeto** (`run` / Studio passam `projectDir`); ex.: `output/example-fetch.txt` |
 | **Demo** | `examples/browser-demo-flow` — `example.com` usa `body p` (o site não expõe mais `<h1>`) |
 | **`setup-dev.bat`** | Pré-check de espaço no C:, MSVC com carga C++, `cargo test`, `validate` nos exemplos; informa qual Chromium foi detectado; `--full` roda demos browser se houver Chrome/Edge |
 
@@ -172,6 +199,7 @@ cargo run -p hoblio-cli -- run <pasta-projeto> --jsonl
 
 ```powershell
 cargo test
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
 ```
 
 Teste de browser com rede + Chrome (ignorado por padrão):
@@ -184,6 +212,7 @@ Regressão manual recomendada antes de release local:
 
 ```powershell
 cargo run -p hoblio-cli -- run examples/demo-flow
+cargo run -p hoblio-cli -- run examples/flow-control-demo
 cargo run -p hoblio-cli -- run examples/web-demo-flow
 cargo run -p hoblio-cli -- run examples/message-timer-demo
 cargo run -p hoblio-cli -- run examples/browser-demo-flow
@@ -201,7 +230,7 @@ cargo run -p hoblio-cli -- run examples/browser-demo-flow
 
 Logs JSONL por execução (CLI `--jsonl`): arquivos sob `.hoblio/` conforme `hoblio-log`.
 
-Interpolação `{variavel}` usa variáveis definidas em **`browser_get_text`** durante o run e valores string/number/bool em `flow.json` → `variables`.
+Interpolação `{variavel}`: variáveis de **`flow.json` → `variables`**, item de **ForEach**, e **`browser_get_text`** durante o run.
 
 ---
 
@@ -228,14 +257,16 @@ meu-fluxo/
 └── flow.json        # nodes[], edges[], start, variables (opcional)
 ```
 
-**Nó (`nodes[]`):** `id`, `kind` (`start` | `action` | `end`), `label`, `action` (se action), `ui: { x, y }`.
+**Nó (`nodes[]`):** `id`, `kind` (`start` | `action` | `end` | `if` | `for_each` | `next_loop` | `exit_loop`), `label`, `action` (se action), `control` (se If/ForEach), `ui: { x, y }`.
 
-**Aresta (`edges[]`):** `from`, `to`, `label` (opcional), `id` (opcional, estável no Studio), `ui` (opcional):
+**Aresta (`edges[]`):** `from`, `to`, `port` (opcional: `main`, `then`, `else`, `body`, `after`), `ui` (opcional):
 
-- `waypoints`: `[{ x, y }, …]` — pontos do tracado no canvas
-- `sourceHandle` / `targetHandle`: `"top" | "right" | "bottom" | "left"` — lado do conector
+- `waypoints`: pontos do tracado no canvas
+- `sourceHandle` / `targetHandle`: lados do conector ou nome da porta (`then`, `body`, …)
 
-Edição manual no JSON continua possível; o **Studio** é o editor visual preferido (quatro lados por nó, religar, waypoints). Condicionais (If) e subfluxos ainda em evolução — ver [decisoes-produto.md](decisoes-produto.md).
+**Variáveis:** objeto `variables` no `flow.json` (listas JSON para ForEach, escalares para If).
+
+Edição manual no JSON continua possível; o **Studio** é o editor visual preferido. Detalhes If/ForEach: [slice 5](fase-mvp-slice5-flow-control.md).
 
 ---
 
@@ -247,10 +278,10 @@ Desenvolvimento local em `master`. Commits feature + mensagens descritivas. Remo
 
 ## 11. Limitações conhecidas (dev)
 
-- Grafo **linear ou DAG simples**; **If/condicionais** ainda não no produto (próximo sprint).
+- **If / ForEach / next / exit** entregues (slice 5); sem `switch`, `while` genérico ou subfluxos aninhados.
+- Ciclos inválidos fora de ForEach: run aborta em **10k visitas**; validate nem sempre detecta.
 - Browser: instância **controlada pelo runtime**, não attach à aba manual do usuário.
-- Variáveis: runtime grava `browser_get_text` e interpola `{nome}` em `file_write`/`log`; painel de variáveis no Studio ainda limitado.
-- Excel, e-mail, HTTP avançado: fora ou adiados — ver decisões de produto.
+- Excel, e-mail, HTTP avançado: fora ou adiados — ver [decisoes-produto.md](decisoes-produto.md).
 
 ---
 

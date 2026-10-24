@@ -115,4 +115,12 @@ pub enum NodeKind {
     Start,
     Action,
     End,
+    /// Branch on `control` (If).
+    If,
+    /// Iterate list in `control` (ForEach); body returns via edge back to this node.
+    ForEach,
+    /// Skip to next iteration of innermost ForEach (PAD Next loop).
+    NextLoop,
+    /// Leave innermost ForEach via its `after` port (PAD Exit loop).
+    ExitLoop,
 }

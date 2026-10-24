@@ -11,7 +11,7 @@
 | **Nós** | Paleta de ações + **End node**; handles de entrada/saída em **topo, direita, baixo, esquerda** (Start só saída; End só entrada) |
 | **Conexões** | Criar, religar extremos, apagar, rótulo na toolbar; pontos de passagem (+) no tracado |
 | **Persistência** | `flow.json` — arestas com `id`, `label`, `ui.waypoints`, `ui.sourceHandle`, `ui.targetHandle` (`hoblio-model`) |
-| **Runtime** | Inalterado: ainda **uma aresta de saída por nó** (cadeia linear); validação `validate_graph` no Save/Validate/Run |
+| **Runtime (na época do slice 4)** | Cadeia linear; validação `validate_graph` no Save/Validate/Run — **supersedido pelo [slice 5](fase-mvp-slice5-flow-control.md)** (If/ForEach, multi-porta) |
 
 ## Estrutura no frontend
 
@@ -35,13 +35,9 @@ npm run tauri dev
 
 Abra `examples/demo-flow`, use **Edição**, ligue nós pelos conectores azuis/cinza, **Save**, reabra para confirmar posição e tracado.
 
-## Limitações (slice 4)
+## Limitações (slice 4, histórico)
 
-- Grafo de execução continua **linear** (substituir aresta ao conectar nova saída do mesmo nó).
-- Sem ramificações If/condicionais no runtime.
+- Grafo de execução **linear** na entrega do slice 4.
+- Ramificações e loops: ver **[slice 5](fase-mvp-slice5-flow-control.md)**.
 - Undo/redo só na sessão do Studio (não versiona git).
 - Inspiração de UX: fluxo do Nape; sem mapa de fases/sentinelas (domínio diferente).
-
-## Próximo passo sugerido
-
-Ramificações no grafo + runtime, ou painel de variáveis no Studio.

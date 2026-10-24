@@ -1,27 +1,88 @@
-import type { FlowNode, ActionKind } from "./model";
+import type { CompareOperator, ControlKind, FlowNode, ActionKind } from "./model";
 import { actionLabel, defaultAction, patchBrowserDomAction } from "./model";
 
 type Props = {
   node: FlowNode | null;
-  onChange: (node: FlowNode) => void;
+  editing: boolean;
+  variablesJson: string;
+  variablesError: string | null;
+  onVariablesJsonChange: (value: string) => void;
+  onChange: (node: FlowNode, options?: { recordHistory?: boolean }) => void;
+  onPropertyCommit: () => void;
   onDelete?: () => void;
 };
 
-export function PropertiesPanel({ node, onChange, onDelete }: Props) {
+export function PropertiesPanel({
+  node,
+  editing,
+  variablesJson,
+  variablesError,
+  onVariablesJsonChange,
+  onChange,
+  onPropertyCommit,
+  onDelete,
+}: Props) {
+  const readOnly = !editing;
+
+  const draftChange = (node: FlowNode) => onChange(node, { recordHistory: false });
+  const commitDraft = () => {
+    if (!readOnly) {
+      onPropertyCommit();
+    }
+  };
+
   if (!node) {
-    return <div className="panel properties">Select a node</div>;
+    return (
+      <div className="panel properties">
+        <h3>Project variables</h3>
+        <p className="hint">JSON object (ex. listas para For each).</p>
+        <label>
+          variables
+          <textarea
+            className="variables-editor"
+            rows={12}
+            value={variablesJson}
+            disabled={readOnly}
+            onChange={(e) => onVariablesJsonChange(e.target.value)}
+          />
+        </label>
+        {variablesError ? <p className="variables-error">{variablesError}</p> : null}
+      </div>
+    );
   }
 
-  const setLabel = (label: string) => onChange({ ...node, label });
+  const setLabel = (label: string) => {
+    if (readOnly) return;
+    draftChange({ ...node, label });
+  };
 
   const setActionType = (type: ActionKind["type"]) => {
-    if (node.kind !== "action") return;
+    if (readOnly || node.kind !== "action") return;
     onChange({ ...node, action: defaultAction(type) });
   };
 
-  const patchAction = (patch: Partial<ActionKind> & { type: ActionKind["type"] }) => {
-    if (node.kind !== "action" || !node.action) return;
-    onChange({ ...node, action: { ...node.action, ...patch } as ActionKind });
+  const patchAction = (
+    patch: Partial<ActionKind> & { type: ActionKind["type"] },
+    options?: { recordHistory?: boolean },
+  ) => {
+    if (readOnly || node.kind !== "action" || !node.action) return;
+    onChange(
+      { ...node, action: { ...node.action, ...patch } as ActionKind },
+      options,
+    );
+  };
+
+  const patchActionDraft = (patch: Partial<ActionKind> & { type: ActionKind["type"] }) =>
+    patchAction(patch, { recordHistory: false });
+
+  const patchIf = (patch: Partial<Extract<ControlKind, { type: "if" }>>) => {
+    if (readOnly || node.control?.type !== "if") return;
+    draftChange({ ...node, control: { ...node.control, ...patch, type: "if" } });
+  };
+
+  const patchForEach = (patch: Partial<Extract<ControlKind, { type: "for_each" }>>) => {
+    if (readOnly || node.control?.type !== "for_each") return;
+    draftChange({ ...node, control: { ...node.control, ...patch, type: "for_each" } });
   };
 
   return (
@@ -40,7 +101,8 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
         <input
           value={node.label ?? ""}
           onChange={(e) => setLabel(e.target.value)}
-          disabled={node.kind === "start"}
+          onBlur={commitDraft}
+          disabled={readOnly || node.kind === "start"}
         />
       </label>
 
@@ -50,6 +112,87 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
         </button>
       ) : null}
 
+      {node.kind === "if" && node.control?.type === "if" && (
+        <>
+          <label>
+            Left
+            <input
+              value={node.control.left}
+              disabled={readOnly}
+              onChange={(e) => patchIf({ left: e.target.value })}
+              onBlur={commitDraft}
+            />
+          </label>
+          <label>
+            Operator
+            <select
+              value={node.control.operator}
+              disabled={readOnly}
+              onChange={(e) => {
+                patchIf({ operator: e.target.value as CompareOperator });
+                commitDraft();
+              }}
+            >
+              <option value="eq">Equal</option>
+              <option value="ne">Not equal</option>
+              <option value="contains">Contains</option>
+            </select>
+          </label>
+          <label>
+            Right
+            <input
+              value={node.control.right}
+              disabled={readOnly}
+              onChange={(e) => patchIf({ right: e.target.value })}
+              onBlur={commitDraft}
+            />
+          </label>
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={node.control.ignore_case ?? false}
+              disabled={readOnly}
+              onChange={(e) => {
+                patchIf({ ignore_case: e.target.checked });
+                commitDraft();
+              }}
+            />
+            Ignore case
+          </label>
+          <p className="hint">Connect saída then (→) e else (↓).</p>
+        </>
+      )}
+
+      {node.kind === "for_each" && node.control?.type === "for_each" && (
+        <>
+          <label>
+            List variable
+            <input
+              value={node.control.list_variable}
+              disabled={readOnly}
+              onChange={(e) => patchForEach({ list_variable: e.target.value })}
+              onBlur={commitDraft}
+            />
+          </label>
+          <label>
+            Item variable
+            <input
+              value={node.control.item_variable}
+              disabled={readOnly}
+              onChange={(e) => patchForEach({ item_variable: e.target.value })}
+              onBlur={commitDraft}
+            />
+          </label>
+          <p className="hint">
+            Lista JSON no projeto (ex. items). Corpo (→) deve voltar ao For each; after (↓) segue após o loop.
+          </p>
+        </>
+      )}
+
+      {(node.kind === "next_loop" || node.kind === "exit_loop") && (
+        <p className="hint">Coloque dentro do corpo do For each; uma saída main.</p>
+      )}
+
       {node.kind === "action" && node.action && (
         <>
           <label>
@@ -57,6 +200,7 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
             <select
               value={node.action.type}
               onChange={(e) => setActionType(e.target.value as ActionKind["type"])}
+              disabled={readOnly}
             >
               <option value="log">Log</option>
               <option value="no_op">NoOp</option>
@@ -78,7 +222,8 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
               <textarea
                 rows={3}
                 value={node.action.message}
-                onChange={(e) => patchAction({ type: "log", message: e.target.value })}
+                onChange={(e) => patchActionDraft({ type: "log", message: e.target.value })}
+                onBlur={commitDraft}
               />
             </label>
           )}
@@ -90,8 +235,13 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                 <input
                   value={node.action.path}
                   onChange={(e) =>
-                    patchAction({ type: "file_write", path: e.target.value, content: node.action!.type === "file_write" ? node.action.content : "" })
+                    patchActionDraft({
+                      type: "file_write",
+                      path: e.target.value,
+                      content: node.action!.type === "file_write" ? node.action.content : "",
+                    })
                   }
+                  onBlur={commitDraft}
                 />
               </label>
               <label>
@@ -100,8 +250,13 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                   rows={4}
                   value={node.action.content}
                   onChange={(e) =>
-                    patchAction({ type: "file_write", content: e.target.value, path: node.action!.type === "file_write" ? node.action.path : "" })
+                    patchActionDraft({
+                      type: "file_write",
+                      content: e.target.value,
+                      path: node.action!.type === "file_write" ? node.action.path : "",
+                    })
                   }
+                  onBlur={commitDraft}
                 />
               </label>
             </>
@@ -112,7 +267,8 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
               URL
               <input
                 value={node.action.url}
-                onChange={(e) => patchAction({ type: "http_get", url: e.target.value })}
+                onChange={(e) => patchActionDraft({ type: "http_get", url: e.target.value })}
+                onBlur={commitDraft}
               />
             </label>
           )}
@@ -124,7 +280,7 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                 <input
                   value={node.action.title}
                   onChange={(e) =>
-                    patchAction({
+                    patchActionDraft({
                       type: "show_message",
                       title: e.target.value,
                       text: node.action!.type === "show_message" ? node.action.text : "",
@@ -134,6 +290,7 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                           : undefined,
                     })
                   }
+                  onBlur={commitDraft}
                 />
               </label>
               <label>
@@ -142,7 +299,7 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                   rows={4}
                   value={node.action.text}
                   onChange={(e) =>
-                    patchAction({
+                    patchActionDraft({
                       type: "show_message",
                       text: e.target.value,
                       title: node.action!.type === "show_message" ? node.action.title : "",
@@ -152,6 +309,7 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                           : undefined,
                     })
                   }
+                  onBlur={commitDraft}
                 />
               </label>
               <label>
@@ -162,13 +320,14 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                   step={0.5}
                   value={node.action.timeout_seconds ?? ""}
                   onChange={(e) =>
-                    patchAction({
+                    patchActionDraft({
                       type: "show_message",
                       title: node.action!.type === "show_message" ? node.action.title : "",
                       text: node.action!.type === "show_message" ? node.action.text : "",
                       timeout_seconds: e.target.value ? Number(e.target.value) : undefined,
                     })
                   }
+                  onBlur={commitDraft}
                 />
               </label>
             </>
@@ -181,12 +340,13 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                 <input
                   value={node.action.url}
                   onChange={(e) =>
-                    patchAction({
+                    patchActionDraft({
                       type: "browser_navigate",
                       url: e.target.value,
                       wait_ms: node.action!.type === "browser_navigate" ? node.action.wait_ms : undefined,
                     })
                   }
+                  onBlur={commitDraft}
                 />
               </label>
               <label>
@@ -195,12 +355,13 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                   type="number"
                   value={node.action.wait_ms ?? ""}
                   onChange={(e) =>
-                    patchAction({
+                    patchActionDraft({
                       type: "browser_navigate",
                       url: node.action!.type === "browser_navigate" ? node.action.url : "",
                       wait_ms: e.target.value ? Number(e.target.value) : undefined,
                     })
                   }
+                  onBlur={commitDraft}
                 />
               </label>
             </>
@@ -216,11 +377,12 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                 <input
                   value={node.action.selector}
                   onChange={(e) =>
-                    onChange({
+                    draftChange({
                       ...node,
                       action: patchBrowserDomAction(node.action!, { selector: e.target.value }, node.action!.type),
                     })
                   }
+                  onBlur={commitDraft}
                 />
               </label>
               <label>
@@ -229,7 +391,7 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                   type="number"
                   value={node.action.timeout_ms ?? ""}
                   onChange={(e) =>
-                    onChange({
+                    draftChange({
                       ...node,
                       action: patchBrowserDomAction(
                         node.action!,
@@ -238,6 +400,7 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                       ),
                     })
                   }
+                  onBlur={commitDraft}
                 />
               </label>
             </>
@@ -250,11 +413,12 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                 rows={3}
                 value={node.action.text}
                 onChange={(e) =>
-                  onChange({
+                  draftChange({
                     ...node,
                     action: patchBrowserDomAction(node.action!, { text: e.target.value }, "browser_fill"),
                   })
                 }
+                onBlur={commitDraft}
               />
             </label>
           )}
@@ -265,7 +429,7 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
               <input
                 value={node.action.variable ?? ""}
                 onChange={(e) =>
-                  onChange({
+                  draftChange({
                     ...node,
                     action: patchBrowserDomAction(
                       node.action!,
@@ -274,6 +438,7 @@ export function PropertiesPanel({ node, onChange, onDelete }: Props) {
                     ),
                   })
                 }
+                onBlur={commitDraft}
               />
             </label>
           )}

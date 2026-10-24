@@ -8,12 +8,16 @@ anyhow = { workspace = true }
 hoblio-log = { path = "../hoblio-log" }
 hoblio-model = { path = "../hoblio-model" }
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 reqwest = { workspace = true }
 tokio = { workspace = true }
 chromiumoxide = { workspace = true }
 futures = { workspace = true }
+
+[dev-dependencies]
+hoblio-serde = { path = "../hoblio-serde" }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = [

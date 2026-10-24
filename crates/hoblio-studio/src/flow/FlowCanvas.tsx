@@ -6,9 +6,11 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
   useStoreApi,
+  type IsValidConnection,
 } from "@xyflow/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { FlowAlignmentGuides } from "./FlowAlignmentGuides";
 import { FlowToolbar } from "./FlowToolbar";
@@ -27,6 +29,7 @@ interface FlowCanvasProps {
 }
 
 function FlowSurface({ controller, onSelectNodeId }: FlowCanvasProps) {
+  const { fitView } = useReactFlow();
   const store = useStoreApi();
   const [guides, setGuides] = useState<AlignmentGuide[]>([]);
   const guidesRef = useRef<AlignmentGuide[]>([]);
@@ -143,6 +146,37 @@ function FlowSurface({ controller, onSelectNodeId }: FlowCanvasProps) {
     [],
   );
 
+  useEffect(() => {
+    if (controller.fitViewToken <= 0) {
+      return;
+    }
+    const id = window.requestAnimationFrame(() => {
+      void fitView({ padding: 0.12, minZoom: 0.15, maxZoom: 1, duration: 200 });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [controller.fitViewToken, fitView]);
+
+  const isValidConnection: IsValidConnection<HoblioFlowEdge> = useCallback(
+    (edgeOrConnection) => {
+      const connection =
+        "id" in edgeOrConnection
+          ? {
+              source: edgeOrConnection.source,
+              target: edgeOrConnection.target,
+              sourceHandle: edgeOrConnection.sourceHandle ?? null,
+              targetHandle: edgeOrConnection.targetHandle ?? null,
+            }
+          : {
+              source: edgeOrConnection.source,
+              target: edgeOrConnection.target,
+              sourceHandle: edgeOrConnection.sourceHandle ?? null,
+              targetHandle: edgeOrConnection.targetHandle ?? null,
+            };
+      return controller.isValidConnection(connection);
+    },
+    [controller],
+  );
+
   const editorApi = useMemo(
     () => ({
       editing: controller.editing,
@@ -175,10 +209,11 @@ function FlowSurface({ controller, onSelectNodeId }: FlowCanvasProps) {
             snapToGrid={controller.editing}
             snapGrid={[10, 10]}
             deleteKeyCode={controller.editing ? ["Backspace", "Delete"] : null}
-            isValidConnection={controller.isValidConnection}
+            isValidConnection={isValidConnection}
             onNodesChange={handleNodesChange}
             onEdgesChange={controller.onEdgesChange}
             onConnect={controller.onConnect}
+            onConnectEnd={(_event, connectionState) => controller.onConnectEnd(connectionState)}
             onReconnect={controller.onReconnect}
             onNodeDragStop={handleNodeDragStop}
             onBeforeDelete={handleBeforeDelete}
