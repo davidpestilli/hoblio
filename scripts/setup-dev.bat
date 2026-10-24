@@ -19,9 +19,15 @@ exit /b 2
 
 :args_done
 
-for %%I in ("%~dp0..") do set "REPO_ROOT=%%~fI"
-cd /d "%REPO_ROOT%" || (
-  echo [setup-dev] ERRO: nao foi possivel entrar na raiz do repo: %REPO_ROOT%
+rem Raiz do repo = pasta pai de scripts\ (contem Cargo.toml do workspace)
+pushd "%~dp0.." || (
+  echo [setup-dev] ERRO: nao foi possivel entrar na raiz do repo.
+  exit /b 1
+)
+set "REPO_ROOT=%CD%"
+if not exist "%REPO_ROOT%\Cargo.toml" (
+  echo [setup-dev] ERRO: Execute na pasta do clone hoblio ou use setup-dev.bat dentro do repositorio
+  popd
   exit /b 1
 )
 
@@ -150,7 +156,23 @@ if errorlevel 1 (
 )
 goto :eof
 
+:TryVcVars64
+where link.exe >nul 2>&1
+if not errorlevel 1 goto :eof
+where cl >nul 2>&1
+if not errorlevel 1 goto :eof
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if not exist "%VSWHERE%" goto :eof
+for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2^>nul`) do (
+  if exist "%%i\VC\Auxiliary\Build\vcvars64.bat" (
+    echo [setup-dev] Configurando ambiente MSVC ^(vcvars64^)...
+    call "%%i\VC\Auxiliary\Build\vcvars64.bat" >nul 2>&1
+  )
+)
+goto :eof
+
 :EnsureMsvcOrExit
+call :TryVcVars64
 call :DetectMsvcPresent
 if not errorlevel 1 goto :eof
 echo.
@@ -197,6 +219,7 @@ if exist "!VSWHERE!" (
 exit /b 1
 
 :MaybeMsvcHelpAfterFailedBuild
+if not exist "%REPO_ROOT%\Cargo.toml" goto :eof
 where link.exe >nul 2>&1
 if not errorlevel 1 goto :eof
 where cl >nul 2>&1
