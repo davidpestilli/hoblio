@@ -21,7 +21,6 @@ pub fn execute_action(
     match action {
         ActionKind::Log(log) => {
             let message = interpolate(&log.message, vars)?;
-            println!("{message}");
             Ok(format!("log: {message}"))
         }
         ActionKind::NoOp => Ok("noop".into()),

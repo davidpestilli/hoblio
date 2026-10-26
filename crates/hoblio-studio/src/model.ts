@@ -117,7 +117,7 @@ export const defaultProject = (): FlowProject => ({
     start: "start",
     nodes: [
       { id: "start", kind: "start", label: "Start", ui: { x: 80, y: 120 } },
-      { id: "end", kind: "end", label: "End", ui: { x: 480, y: 120 } },
+      { id: "end", kind: "end", label: "End", ui: { x: 720, y: 120 } },
     ],
     edges: [{ from: "start", to: "end" }],
   },

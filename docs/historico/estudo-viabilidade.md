@@ -11,7 +11,7 @@
 
 **Veredito: viável, com escopo delimitado** — reimplementar capacidades equivalentes ao PAD para uso pessoal local é **tecnicamente viável**; alcançar **paridade** com o ecossistema Microsoft (400+ ações, conectores cloud, Dataverse, OCR, SAP, etc.) é **inviável** para um projeto solo ou time pequeno.
 
-O Hoblio deve tratar o PAD como **referência de UX**, não como alvo de compatibilidade binária ou de formato Robin. Com as [decisões de produto](cursor.agent://project/context/docs/decisoes-produto.md) — **uso local**, **navegadores primeiro** (automação web), arquivos, HTTP simples, Excel na v1 (com e sem Excel aberto), **sem e-mail por enquanto**, HTTP avançado **adiado** — o caminho recomendado é um **MVP** (designer **flowchart** + runtime + logs + **browser** + arquivos + HTTP básico) seguido de **v1** (Excel dual, UIA ampliada, subflows).
+O Hoblio deve tratar o PAD como **referência de UX**, não como alvo de compatibilidade binária ou de formato Robin. Com as [decisões de produto](../produto/decisoes-produto.md) — **uso local**, **navegadores primeiro** (automação web), arquivos, HTTP simples, Excel na v1 (com e sem Excel aberto), **sem e-mail por enquanto**, HTTP avançado **adiado** — o caminho recomendado é um **MVP** (designer **flowchart** + runtime + logs + **browser** + arquivos + HTTP básico) seguido de **v1** (Excel dual, UIA ampliada, subflows).
 
 **Stack recomendada:** workspace Rust (`hoblio-*` crates) + **Tauri 2** para shell e designer (canvas drag-and-drop via React Flow ou similar) + runtime 100% Rust. Alternativa “mais nativa/leve”: **egui** + grafo customizado, com custo maior de UX no canvas.
 
@@ -84,7 +84,7 @@ Legenda: ✅ MVP · 🔶 v1 · ⬜ posterior · ❌ fora de escopo inicial
 | Logging (PAD module) | Write to log | ✅ painel + arquivo | MVP |
 | Subflows / flowchart UI | FUNCTION … END; grafo | ✅ flowchart MVP · 🔶 subflows v1 | MVP→v1 |
 
-**Decisões David:** ver [decisoes-produto.md](cursor.agent://project/context/docs/decisoes-produto.md). MVP: **navegador + arquivos + HTTP simples**; v1: **Excel (dual)** + **UIA apps**; e-mail e HTTP avançado **fora por agora**.
+**Decisões David:** ver [decisoes-produto.md](../produto/decisoes-produto.md). MVP: **navegador + arquivos + HTTP simples**; v1: **Excel (dual)** + **UIA apps**; e-mail e HTTP avançado **fora por agora**.
 
 ---
 
@@ -210,7 +210,7 @@ Painel estilo PAD: filtro por nível, busca por step, auto-scroll toggle.
 ### Adiado (decisão registrada)
 
 - **E-mail** (SMTP/IMAP/OAuth).
-- **HTTP avançado** (proxy corporativo, certificado cliente, OAuth) — retomar quando necessário; ver [decisoes-produto.md](cursor.agent://project/context/docs/decisoes-produto.md).
+- **HTTP avançado** (proxy corporativo, certificado cliente, OAuth) — retomar quando necessário; ver [decisoes-produto.md](../produto/decisoes-produto.md).
 
 ### Pós-v1 (opcional)
 
@@ -246,9 +246,9 @@ Números assumem familiaridade com Rust/Windows; UIA e polish de designer domina
 
 ## Decisões registradas (David, 23/10/2026)
 
-Detalhes em [decisoes-produto.md](cursor.agent://project/context/docs/decisoes-produto.md): Excel **dual**; **sem e-mail** por enquanto; HTTP avançado **adiado**; **UIA** com foco inicial em **navegadores**; fluxo em **JSON**; projeto em **pasta**.
+Detalhes em [decisoes-produto.md](../produto/decisoes-produto.md): Excel **dual**; **sem e-mail** por enquanto; HTTP avançado **adiado**; **UIA** com foco inicial em **navegadores**; fluxo em **JSON**; projeto em **pasta**.
 
-**Designer (23/10):** flowchart no MVP; montagem manual (sem recorder); sem fluxo PAD de referência — ver [decisoes-produto.md](cursor.agent://project/context/docs/decisoes-produto.md).
+**Designer (23/10):** flowchart no MVP; montagem manual (sem recorder); sem fluxo PAD de referência — ver [decisoes-produto.md](../produto/decisoes-produto.md).
 
 ---
 

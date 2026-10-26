@@ -33,7 +33,7 @@ npm run tauri dev
    - **Religar** aresta no modo Edição.
    - **Tracado:** aresta selecionada → **+** no segmento; waypoints.
    - **Desfazer / Refazer** (toolbar ou **Ctrl+Z** / **Ctrl+Shift+Z**).
-   - **Limpar fluxo** — repõe o diagrama a Start + End (uma ligação), zera **Project variables**; pede confirmação; mantém nome do projeto e pasta aberta (precisa **Save** para gravar no disco).
+   - **Limpar fluxo** — repõe o diagrama a Start + End (uma ligação), zera **Project variables**; pede confirmação; **desassocia a pasta aberta** (o próximo **Save** pede destino de novo, para não sobrescrever o projeto anterior por engano).
 3. **Painel Properties** (direita): parâmetros do nó selecionado; **Delete node** no modo Edição.
 4. **Sem nó selecionado:** **Project variables** — seções **Variables** e **Lists** (ou **Advanced JSON**); listas para For each, escalares (ex. `flag`) para If.
 5. **Validate** — `validate_project` (grafo + variáveis); erros em vermelho na barra.
@@ -121,7 +121,7 @@ Ordem típica: **`browser_navigate`** primeiro; depois passos DOM na **mesma exe
 | `browser_fill` | Digitar em campo |
 | `browser_get_text` | Ler texto → variável (`variable`) |
 
-Nós de ação podem ter **`error_handling`**: `retry_count`, `retry_delay_ms`, `on_failure` (`stop` \| `continue`). Ver [slice 8](fase-mvp-slice8-browser-resilience.md).
+Nós de ação podem ter **`error_handling`**: `retry_count`, `retry_delay_ms`, `on_failure` (`stop` \| `continue`). Ver [slice 8](mvp/fase-mvp-slice8-browser-resilience.md).
 
 **Variáveis:** objeto `variables` no `flow.json` ou painel do Studio; `{nome}` em `log` e `file_write`.
 
@@ -136,7 +136,7 @@ No Studio: **Save** na pasta do projeto.
 - `manifest.json` — metadados
 - `flow.json` — nós, arestas (`port` quando If/ForEach), `variables`
 
-Detalhes: [guia de construção §9](guia-construcao.md) · [slice 5](fase-mvp-slice5-flow-control.md).
+Detalhes: [guia de construção §9](guia-construcao.md) · [slice 5](mvp/fase-mvp-slice5-flow-control.md).
 
 ---
 
@@ -147,7 +147,7 @@ Detalhes: [guia de construção §9](guia-construcao.md) · [slice 5](fase-mvp-s
 - UIA Windows além do pacote browser
 - Importar fluxos Power Automate Desktop
 
-Roadmap: [decisoes-produto.md](decisoes-produto.md).
+Roadmap: [decisoes-produto.md](produto/decisoes-produto.md).
 
 ---
 
@@ -169,5 +169,5 @@ Roadmap: [decisoes-produto.md](decisoes-produto.md).
 ## 8. Mais detalhe técnico
 
 - [Guia de construção](guia-construcao.md) — compilar, testes, harness, estender ações
-- Slices: [1](fase-mvp-slice1.md) · [2](fase-mvp-slice2.md) · [3](fase-mvp-slice3-browser.md) · [4](fase-mvp-slice4-flow-editor.md) · **[5 flow control](fase-mvp-slice5-flow-control.md)**
-- Avaliação Grok: [eval-grok-flow-control.md](eval-grok-flow-control.md)
+- [Índice docs](README.md) · Slices: [1](mvp/fase-mvp-slice1.md) … [8](mvp/fase-mvp-slice8-browser-resilience.md)
+- Avaliação Grok: [avaliacao/README.md](avaliacao/README.md)

@@ -8,15 +8,18 @@ Hoblio é um **designer de fluxos local** (estilo RPA desktop leve): você monta
 
 **Stack:** Rust (runtime + CLI) · Tauri 2 + React + React Flow (Studio).
 
-**Estado:** MVP em progresso — editor flowchart, **If / ForEach**, browser CDP, arquivos, HTTP. Último slice: [5 — controle de fluxo](docs/fase-mvp-slice5-flow-control.md) (ver também [slice 4 — editor](docs/fase-mvp-slice4-flow-editor.md)).
+**Estado:** MVP em progresso — slices 1–8 (editor, If/ForEach/While/Repeat, browser, arquivos/listas, resiliência). Últimas entregas: [slice 8](docs/mvp/fase-mvp-slice8-browser-resilience.md) · [slice 5 — flow control](docs/mvp/fase-mvp-slice5-flow-control.md).
 
 ## Documentação
 
-- [Guia de utilização](docs/guia-utilizacao.md) — Studio, CLI, exemplos e ações
-- [Guia de construção](docs/guia-construcao.md) — compilar, testes, `scripts/setup-dev.bat` e estender o sistema
-- [Decisões de produto](docs/decisoes-produto.md)
+Índice completo: **[docs/README.md](docs/README.md)**
 
-Outros: [estudo de viabilidade](docs/estudo-viabilidade.md) · [fase 0](docs/fase-0.md) · slices MVP em `docs/fase-mvp-slice*.md` · regressão: `scripts/eval-flow-control.ps1`
+- [Guia de utilização](docs/guia-utilizacao.md) — Studio, CLI, exemplos e ações
+- [Guia de construção](docs/guia-construcao.md) — compilar, testes, QA Grok, estender o sistema
+- [Decisões de produto](docs/produto/decisoes-produto.md)
+- [Avaliação / relatórios Grok](docs/avaliacao/README.md)
+
+Regressão: `scripts/eval-flow-control.ps1` (24 PASS) · `scripts/eval-rpa-abc.ps1` (27 PASS)
 
 ## Início rápido (Windows)
 
@@ -58,7 +61,7 @@ Hoblio/
     hoblio-cli/          # binário `hoblio`
     hoblio-studio/       # Tauri + React Flow
   examples/              # pastas de projeto (manifest.json + flow.json)
-  docs/
+  docs/                  # guias, mvp/, avaliacao/relatorios/
   scripts/setup-dev.bat
 ```
 

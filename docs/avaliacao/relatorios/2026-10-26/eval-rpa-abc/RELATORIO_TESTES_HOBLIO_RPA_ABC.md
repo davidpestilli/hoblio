@@ -4,7 +4,7 @@
 **Executor:** Grok Bot (a pedido de David Souza)
 **Máquina:** PC do David (Windows) – `E:\Projetos\hoblio`
 **Commit avaliado:** `a4ccd55` – *feat(rpa): entregas A/B/C com loops, arquivos/listas e resiliencia* (HEAD confirmado, árvore limpa, igual a `origin/master`)
-**Protocolo:** `docs/eval-grok-rpa-abc.md` + `scripts/eval-flow-control.ps1` (slice 5)
+**Protocolo:** [eval-grok-rpa-abc.md](../../../protocolos/eval-grok-rpa-abc.md) + `scripts/eval-flow-control.ps1` (slice 5)
 
 ## Veredito
 
@@ -210,7 +210,7 @@ Legenda: **PASS (CLI)** = o comportamento de runtime/validação foi verificado 
 
 ## 9. Integridade (nada alterado)
 
-- Nenhum commit, push, edição de código ou config. `git status` após os testes: apenas a pasta nova não rastreada `reports/eval-rpa-abc-2026-10-26/`; `git diff` vazio (o `npm run build` dos harnesses regenerou `crates/hoblio-studio/dist/index.html` idêntico ao versionado).
+- Nenhum commit, push, edição de código ou config. `git status` após os testes: apenas a pasta nova não rastreada `docs/avaliacao/relatorios/2026-10-26/eval-rpa-abc/`; `git diff` vazio (o `npm run build` dos harnesses regenerou `crates/hoblio-studio/dist/index.html` idêntico ao versionado).
 - Nenhum `.env` existente.
 - Nenhum processo pré-existente foi encerrado (Studio, Vite, cargo continuam rodando).
 - Saídas temporárias: `examples/files-lists-demo/output/report.txt` é criado e removido pelo próprio harness (pasta `output/` é gitignored); o `%TEMP%\hoblio-eval-*` é do harness. Meus fluxos de teste e o Playwright (`playwright-core` instalado localmente) ficaram em `C:\Users\david\AppData\Local\Temp\hoblio-grok-eval-2026-10-26\` – pode ser apagada quando quiser.

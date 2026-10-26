@@ -11,7 +11,7 @@
 | **CLI** | `run` com diretório do projeto (`run_with_root`); `file_write` relativo à **pasta do projeto** |
 | **Studio** | Paleta If / For each / Next loop / Exit loop; handles then→ / else↓ / body→ / after↓; **Project variables** (UI visual + Advanced JSON); For each com select de listas; Validate/Save/Open com erro no status; **Stop**; Ctrl+S / Ctrl+Z; log redimensionável (splitter superior); feedback de conexão inválida (`onConnectEnd`); undo de propriedades por campo (commit no blur) |
 | **Exemplo** | `examples/flow-control-demo` |
-| **QA** | `docs/eval-grok-flow-control.md`, `scripts/eval-flow-control.ps1` (24× PASS); reteste em `docs/eval-grok-retest-priorities.md` |
+| **QA** | [eval-grok-flow-control.md](../avaliacao/protocolos/eval-grok-flow-control.md), `scripts/eval-flow-control.ps1` (24× PASS); reteste em [eval-grok-retest-priorities.md](../avaliacao/protocolos/eval-grok-retest-priorities.md) |
 
 ## Formato JSON (resumo)
 
@@ -36,7 +36,7 @@ Studio: Open `examples/flow-control-demo`, clique no canvas, em **Project variab
 
 ### Variáveis (UI + PAD-style, pós-slice 5)
 
-Documentação completa: [guia-construcao.md §4 — Variáveis no Studio](guia-construcao.md).
+Documentação completa: [guia-construcao.md §4 — Variáveis no Studio](../guia-construcao.md).
 
 - **Project variables** — seeds (`ProjectVariablesPanel`, escalares/listas, Advanced JSON); correção de foco ao digitar (keys estáveis por índice).
 - **Flow variables** — índice de produtores no canvas; **Set variable** e **Output variable** em BrowserGetText; defaults `BrowserText1` / `Var1`; `set_variable` no model/runtime/validate.

@@ -2,12 +2,12 @@
 
 Documento para o **Grok bot** (ou agente equivalente) **retestar** a fatia de controle de fluxo + correções do Studio apontadas nos relatórios:
 
-- `docs/eval-report-flow-control-2026-10-24.md` (runtime + harness)
-- `docs/eval-report-studio-ui-2026-10-24.md` (UI manual)
+- [eval-report-flow-control-2026-10-24.md](../relatorios/2026-10-24/eval-report-flow-control-2026-10-24.md) (runtime + harness)
+- [eval-report-studio-ui-2026-10-24.md](../relatorios/2026-10-24/eval-report-studio-ui-2026-10-24.md) (UI manual)
 
 **Repositório:** `E:\Projetos\hoblio` (ajuste o caminho se o clone for outro).
 
-**Baseline esperada (pós-commit slice 5 + reteste):** harness **21× PASS, 0× FAIL**, exit **0**; T-N02 exige mensagem `duplicate outgoing port`; Studio: B13 (`output/...` nos exemplos), T-S-reject, T-S-log, cancelamento neutro, confirmação ao Open com dirty state — ver [eval-report-retest-2026-10-24.md](eval-report-retest-2026-10-24.md) (itens corrigidos na rodada seguinte).
+**Baseline esperada (pós-commit slice 5 + reteste):** harness **21× PASS, 0× FAIL**, exit **0**; T-N02 exige mensagem `duplicate outgoing port`; Studio: B13 (`output/...` nos exemplos), T-S-reject, T-S-log, cancelamento neutro, confirmação ao Open com dirty state — ver [eval-report-retest-2026-10-24.md](../relatorios/2026-10-24/eval-report-retest-2026-10-24.md) (itens corrigidos na rodada seguinte).
 
 ---
 
@@ -50,7 +50,7 @@ Documento para o **Grok bot** (ou agente equivalente) **retestar** a fatia de co
 
 ## 2. Execução automatizada (obrigatória)
 
-Mesmo protocolo de `docs/eval-grok-flow-control.md`:
+Mesmo protocolo de [eval-grok-flow-control.md](eval-grok-flow-control.md):
 
 ```powershell
 cd E:\Projetos\hoblio
@@ -152,9 +152,9 @@ cargo test -q
 ## 6. Prompt sugerido (copiar para o Grok bot)
 
 ```text
-Reteste o repositório Hoblio conforme docs/eval-grok-retest-priorities.md.
+Reteste o repositório Hoblio conforme docs/avaliacao/protocolos/eval-grok-retest-priorities.md.
 
-1) Leia os relatórios baseline em docs/eval-report-flow-control-2026-10-24.md e docs/eval-report-studio-ui-2026-10-24.md para saber o que era FAIL antes.
+1) Leia os relatórios baseline em docs/avaliacao/relatorios/2026-10-24/ para saber o que era FAIL antes.
 2) Rode na raiz: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
    Exija GROK_EVAL SUMMARY pass=21 fail=0 e exit code 0.
 3) Se tiver automação de UI, execute a checklist §3 (T-S01, T-S-open, C1, B4, B7, B8, B10, B13, T-S-vars, T-S-keys, T-S-reject, T-S-stop, T-S-log, etc.) e compare com “Resultado esperado”.

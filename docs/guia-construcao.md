@@ -2,7 +2,7 @@
 
 Documento consolidado para **montar, compilar e estender** o sistema. Estado reflete o repo após **slices 5–8**: controle de fluxo (If/ForEach/While/Repeat), variáveis PAD-style, **entregas A/B/C** (loops numéricos, arquivos/listas em runtime, browser wait + retry/continue).
 
-Para histórico por entrega: [Fase 0](fase-0.md), [1](fase-mvp-slice1.md) · [2](fase-mvp-slice2.md) · [3 browser](fase-mvp-slice3-browser.md) · [4 editor](fase-mvp-slice4-flow-editor.md) · [5 flow control](fase-mvp-slice5-flow-control.md) · **[6 loops](fase-mvp-slice6-variables-loops.md)** · **[7 arquivos/listas](fase-mvp-slice7-files-lists.md)** · **[8 resiliência](fase-mvp-slice8-browser-resilience.md)**.
+Índice geral: [docs/README.md](README.md). Histórico por entrega: [Fase 0](historico/fase-0.md), [1](mvp/fase-mvp-slice1.md) · [2](mvp/fase-mvp-slice2.md) · [3 browser](mvp/fase-mvp-slice3-browser.md) · [4 editor](mvp/fase-mvp-slice4-flow-editor.md) · [5 flow control](mvp/fase-mvp-slice5-flow-control.md) · **[6 loops](mvp/fase-mvp-slice6-variables-loops.md)** · **[7 arquivos/listas](mvp/fase-mvp-slice7-files-lists.md)** · **[8 resiliência](mvp/fase-mvp-slice8-browser-resilience.md)**.
 
 ---
 
@@ -18,14 +18,32 @@ Hoblio/
 │   ├── hoblio-cli/        # hoblio validate | run
 │   └── hoblio-studio/     # Tauri 2 + React + React Flow (UI)
 ├── examples/              # Projetos de fluxo de demonstração
-└── docs/
+├── scripts/               # setup-dev.bat, eval-flow-control.ps1, eval-rpa-abc.ps1
+└── docs/                  # Ver árvore abaixo
+```
+
+**Árvore `docs/` (organização atual):**
+
+```
+docs/
+├── README.md                 # Índice
+├── guia-construcao.md        # Este documento
+├── guia-utilizacao.md
+├── troubleshooting-windows.md
+├── produto/decisoes-produto.md
+├── historico/                # fase-0, estudo-viabilidade
+├── mvp/                      # fase-mvp-slice1 … slice8
+└── avaliacao/
+    ├── README.md
+    ├── protocolos/           # eval-grok-*.md (Grok / CI)
+    └── relatorios/           # YYYY-MM-DD/… (evidências Grok)
 ```
 
 - **Runtime 100% Rust** — compartilhado pelo CLI e pelo Studio (Tauri chama o mesmo código).
 - **Studio** — shell WebView2; editor flowchart; não é VS Code/Cursor.
 - **Persistência** — pasta de projeto com `manifest.json` + `flow.json` (JSON; If, loops ForEach/While/Repeat, `error_handling` opcional em nós de ação).
 
-Decisões de produto: [decisoes-produto.md](decisoes-produto.md).
+Decisões de produto: [produto/decisoes-produto.md](produto/decisoes-produto.md).
 
 ---
 
@@ -134,14 +152,16 @@ Implementação em `crates/hoblio-studio/src/flow/` (React Flow 12), inspirada n
 
 | Módulo | Função |
 |--------|--------|
-| `useFlowEditor.ts` | Canvas, undo/redo, multi-port connect, `onConnectEnd` (feedback), Stop/cancel no run |
+| `useFlowEditor.ts` | Canvas, undo/redo, multi-port connect, grade de spawn (controles/ações), `onConnectEnd` (feedback), Stop/cancel no run |
 | `FlowCanvas.tsx` | React Flow, guias de alinhamento, tecla Delete |
 | `FlowToolbar.tsx` | Exibição/Edição, desfazer/refazer, **Limpar fluxo**, apagar seleção, rótulo da aresta selecionada |
-| `App.tsx` | **`clearFlow`**: diálogo de confirmação → `projectWithClearedFlow` (grafo mínimo Start–End de `defaultProject()`, `variables: {}`), mantém `manifest` e `projectDir`; `editor.loadProject`; indisponível durante **Run** |
+| `App.tsx` | **`clearFlow`**: diálogo de confirmação → `projectWithClearedFlow` (grafo mínimo Start–End de `defaultProject()`, `variables: {}`), mantém `manifest`, **zera `projectDir`**; `editor.loadProject`; indisponível durante **Run** |
 | `WaypointEdge.tsx` | Tracado com pontos de passagem |
-| `flowConvert.ts` | Conversão `flow.json` ↔ nós/arestas do React Flow |
+| `flowConvert.ts` | Conversão `flow.json` ↔ nós/arestas do React Flow; arestas de loop não ganham `ui.sourceHandle` redundante quando já existe `port` (digest / dirty state) |
 
-Detalhes: [slice 4](fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEach](fase-mvp-slice5-flow-control.md).
+**Inserção na paleta:** `spawnPosition` — grade 4×200 px; contadores **separados** para controles (`y≈240`) e ações (`y≈400`); nó **End** padrão em `(720, 120)` para não colidir com Repeat/While num canvas limpo.
+
+Detalhes: [slice 4](mvp/fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEach](mvp/fase-mvp-slice5-flow-control.md).
 
 ### Variáveis no Studio (PAD-style)
 
@@ -195,7 +215,7 @@ npm run build   # tsc --noEmit && vite build
 | **`validate_project`** | Grafo + listas ForEach + produtores de variável (duplicados / nomes inválidos) + next/exit no corpo |
 | **`examples/flow-control-demo`** | If + ForEach + variáveis `flag` / `items` |
 | **`scripts/eval-flow-control.ps1`** | Harness Grok/CI — esperado **24 PASS, 0 FAIL** (inclui validate de cada `examples/*` com manifest) |
-| **Docs de avaliação** | [eval-grok-flow-control.md](eval-grok-flow-control.md), [eval-grok-retest-priorities.md](eval-grok-retest-priorities.md) |
+| **Docs de avaliação** | [eval-grok-flow-control.md](avaliacao/protocolos/eval-grok-flow-control.md), [eval-grok-retest-priorities.md](avaliacao/protocolos/eval-grok-retest-priorities.md) |
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
@@ -254,12 +274,32 @@ Listas em run são **JSON array** em string (mesmo formato que listas em Project
 | `scripts/eval-flow-control.ps1` | Slice 5 — If/ForEach (**24 PASS** esperado) |
 | `scripts/eval-rpa-abc.ps1` | Slices 6–8 + regressão `flow-control-demo` + build Studio |
 
-Documentação detalhada para o Grok bot: [eval-grok-rpa-abc.md](eval-grok-rpa-abc.md) (matriz CLI + cenários manuais Studio).
+Documentação detalhada para o Grok bot: [eval-grok-rpa-abc.md](avaliacao/protocolos/eval-grok-rpa-abc.md) (matriz CLI + cenários manuais Studio). Relatórios: [avaliacao/relatorios/](avaliacao/relatorios/).
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-rpa-abc.ps1
 ```
+
+---
+
+## 4.7 Correções QA (Grok, out/2026)
+
+Rodadas documentadas em [avaliacao/relatorios/2026-10-26/](avaliacao/relatorios/2026-10-26/).
+
+| ID | Área | Correção |
+|----|------|----------|
+| **B1** | Runtime | `increase_variable` / `decrease_variable`: variável ausente = 0; valor existente não numérico → erro (`adjust_var.rs`) |
+| **B2** | CLI / runtime | Resumos `ActionExecuted` no stdout; evento `action_executed` no `--jsonl` |
+| **B3** | Docs | Harness flow-control documentado como **24 PASS** |
+| **B4** | Studio | Paleta “Wait navigation”; grade de spawn; End em `(720,120)`; contadores separados controles/ações |
+| **B5** | Log / browser | Filtro `chromiumoxide=error`; pausa no shutdown do browser |
+| **N1** | Studio | **Limpar fluxo** zera `projectDir` — Save pede pasta de novo |
+| **N2** | Studio | `flowToGraph`: não persistir `ui.sourceHandle` quando `port` já descreve a aresta (evita “Unsaved changes” falso) |
+| **N3** | CLI | Ação **Log** não chama `println!` — uma linha `log: …` via listener |
+| **N4** | Repo | Após `npm run build` (T-F01), commitar `crates/hoblio-studio/dist/index.html` se o hash do bundle mudar |
+
+**CLI `run`:** cada ação imprime **uma** linha de resumo no stdout; com `--jsonl`, espelho em `.hoblio/run.jsonl` (`action_executed`, campo `detail`).
 
 ---
 
@@ -338,7 +378,7 @@ Interpolação `{variavel}`: seeds em **`flow.json` → `variables`**, valores e
 3. **`hoblio-runtime`** — executor em `actions.rs` (ou módulo); emitir eventos `action_executed`.
 4. **`hoblio-studio`** — paleta, **Output variable** (se produz valor), defaults em `actionOutputDefaults.ts`, registro em `flowVariables.ts`, `flowConvert.ts` + `useFlowEditor`.
 5. **`examples/`** — fluxo demo mínimo.
-6. **Teste** — unit em model/runtime; doc em `docs/fase-mvp-sliceN-….md` ou atualizar este guia.
+6. **Teste** — unit em model/runtime; doc em `docs/mvp/fase-mvp-sliceN-….md` ou atualizar este guia.
 
 Ações **Windows-only** (ex.: `show_message`) devem falhar com erro claro em outros SOs.
 
@@ -363,7 +403,7 @@ meu-fluxo/
 
 **Variáveis (seed):** objeto `variables` — **array** = lista (For each); **string / number / boolean** = escalar. **Variáveis de run:** outputs de ações, `set_variable`, `list_append`, item/index de loops, `file_read.variable`.
 
-Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. Controle de fluxo: [slice 5–8](fase-mvp-slice5-flow-control.md); variáveis PAD-style: §4 **Variáveis no Studio**.
+Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. Controle de fluxo: [slice 5–8](mvp/fase-mvp-slice5-flow-control.md); variáveis PAD-style: §4 **Variáveis no Studio**.
 
 **Exemplos por entrega:** `flow-control-demo` · `variables-loops-demo` · `files-lists-demo` · `resilience-demo` · `browser-demo-flow`.
 
@@ -382,14 +422,17 @@ Desenvolvimento local em `master`. Commits feature + mensagens descritivas. Remo
 - Ciclos inválidos fora de cabeça de loop: run aborta em **10k visitas**; validate nem sempre detecta.
 - Browser: instância **controlada pelo runtime**; `wait_for_navigation` após clique sem navegação espera até timeout.
 - `file_read` UTF-8; sem `list_length` / `list_remove` dedicados.
-- Excel, e-mail, HTTP avançado: fora ou adiados — [decisoes-produto.md](decisoes-produto.md).
+- Excel, e-mail, HTTP avançado: fora ou adiados — [decisoes-produto.md](produto/decisoes-produto.md).
+- Diálogos nativos empilhados no Studio (Open enquanto outro modal aberto): UX a melhorar.
 
 ---
 
 ## 12. Referências
 
-- [Avaliação Grok — entregas A/B/C](eval-grok-rpa-abc.md)
-- [Avaliação Grok — flow control (slice 5)](eval-grok-flow-control.md)
+- [Índice da documentação](README.md)
+- [Avaliação — índice](avaliacao/README.md)
+- [Avaliação Grok — entregas A/B/C](avaliacao/protocolos/eval-grok-rpa-abc.md)
+- [Avaliação Grok — flow control (slice 5)](avaliacao/protocolos/eval-grok-flow-control.md)
 - [Troubleshooting Windows](troubleshooting-windows.md)
-- [Estudo de viabilidade](estudo-viabilidade.md)
+- [Estudo de viabilidade](historico/estudo-viabilidade.md)
 - [Guia de utilização](guia-utilizacao.md)

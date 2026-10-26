@@ -90,7 +90,7 @@ export function flowToGraph(
     const persistSourceHandle =
       normalizedHandle &&
       normalizedHandle !== MAIN_SOURCE_HANDLE &&
-      (isControl || normalizedHandle !== MAIN_SOURCE_HANDLE);
+      !(port && normalizedHandle === port);
     const ui =
       waypoints.length > 0 || targetHandle || persistSourceHandle
         ? {

@@ -143,7 +143,8 @@ export function useFlowEditor(
   }));
 
   const snapshotRef = useRef<CanvasSnapshot>({ nodes: initial.nodes, edges: initial.edges, start: initialProject.flow.start });
-  const spawnOffsetRef = useRef(0);
+  const controlSpawnRef = useRef(0);
+  const actionSpawnRef = useRef(0);
   const [fitViewToken, setFitViewToken] = useState(0);
   const onConnectionRejected = options?.onConnectionRejected;
   const onConnectionNotice = options?.onConnectionNotice;
@@ -207,7 +208,8 @@ export function useFlowEditor(
       };
       applySnapshot(snapshot);
       setHistory({ items: [cloneSnapshot(snapshot)], index: 0 });
-      spawnOffsetRef.current = 0;
+      controlSpawnRef.current = 0;
+      actionSpawnRef.current = 0;
       setFitViewToken((t) => t + 1);
     },
     [applySnapshot],
@@ -486,8 +488,8 @@ export function useFlowEditor(
       >,
     ) => {
       const id = `${kind}_${Date.now().toString(36)}`;
-      const idx = spawnOffsetRef.current++;
-      const { x, y } = spawnPosition(idx, 240, 80);
+      const idx = controlSpawnRef.current++;
+      const { x, y } = spawnPosition(idx, 240, 240);
       const controlKinds = ["if", "for_each", "while_loop", "repeat"] as const;
       const labelByKind: Partial<Record<NodeKind, string>> = {
         for_each: "For each",
@@ -519,8 +521,8 @@ export function useFlowEditor(
   const addAction = useCallback(
     (type: ActionKind["type"], seedVariables?: Record<string, unknown>) => {
       const id = newActionNodeId();
-      const idx = spawnOffsetRef.current++;
-      const { x, y } = spawnPosition(idx, 200, 320);
+      const idx = actionSpawnRef.current++;
+      const { x, y } = spawnPosition(idx, 200, 400);
       const flowNodes = snapshotRef.current.nodes.map((n) => n.data.flowNode);
       const taken = collectTakenVariableNames(flowNodes, seedVariables ?? {});
       const flowNode: FlowNode = {

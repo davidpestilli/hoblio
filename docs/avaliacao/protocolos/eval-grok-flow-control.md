@@ -144,7 +144,7 @@ APROVADO | REPROVADO | BLOCKED
 ## 7. Invocação sugerida para o Grok bot (prompt)
 
 ```text
-Execute o esquema em docs/eval-grok-flow-control.md:
+Execute o esquema em docs/avaliacao/protocolos/eval-grok-flow-control.md:
 1) Verifique pré-requisitos P1–P4.
 2) Rode scripts/eval-flow-control.ps1 na raiz do repositório Hoblio.
 3) Se exit 0 e GROK_EVAL SUMMARY fail=0, veredito APROVADO; senão REPROVADO com tabela de TEST_ID.

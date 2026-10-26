@@ -151,7 +151,7 @@ Validar **S-C02** / **S-C03** com `examples/browser-demo-flow` estendido no canv
 
 ## 6. Referências
 
-- [slice 6 — variáveis + loops](fase-mvp-slice6-variables-loops.md)
-- [slice 7 — arquivos + listas](fase-mvp-slice7-files-lists.md)
-- [slice 8 — browser + resiliência](fase-mvp-slice8-browser-resilience.md)
-- [Guia de construção §4.3–4.5](guia-construcao.md)
+- [slice 6 — variáveis + loops](../../mvp/fase-mvp-slice6-variables-loops.md)
+- [slice 7 — arquivos + listas](../../mvp/fase-mvp-slice7-files-lists.md)
+- [slice 8 — browser + resiliência](../../mvp/fase-mvp-slice8-browser-resilience.md)
+- [Guia de construção §4.3–4.7](../../guia-construcao.md)

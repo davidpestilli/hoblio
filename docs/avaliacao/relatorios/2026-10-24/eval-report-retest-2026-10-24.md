@@ -1,6 +1,6 @@
 ## Reteste Hoblio - prioridades alta + baixa
 
-> **Atualização pós-reteste:** correções aplicadas no repo (T-N02 no harness, paths `output/...` nos exemplos, `onConnectEnd`, splitter do log, undo por campo, cancelamento neutro, confirmação Open, `write_json_if_changed` semântico). Revalidar com `eval-flow-control.ps1` e checklist §3 de [eval-grok-retest-priorities.md](eval-grok-retest-priorities.md).
+> **Atualização pós-reteste:** correções aplicadas no repo (T-N02 no harness, paths `output/...` nos exemplos, `onConnectEnd`, splitter do log, undo por campo, cancelamento neutro, confirmação Open, `write_json_if_changed` semântico). Revalidar com `eval-flow-control.ps1` e checklist §3 de [eval-grok-retest-priorities.md](../../protocolos/eval-grok-retest-priorities.md).
 
 - Data/ambiente: 24/10/2026, 11:20 a 11:50 (horário de Brasília). Harness e CLI rodaram no Windows do David (`E:\Projetos\hoblio`). Studio rodou numa cópia do repositório num desktop Linux (Debian 13, Xvfb, `npm run tauri dev`), sem nenhuma alteração no código desta vez: o `icon.png` já veio RGBA e compilou.
 - Commit/branch: alterações não commitadas sobre `d6d3494` (feat(studio): full flowchart editor with 4-side connections)

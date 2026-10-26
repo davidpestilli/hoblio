@@ -158,10 +158,11 @@ export default function App() {
       const current = syncProjectFromCanvas();
       const cleared = projectWithClearedFlow(current);
       setProject(cleared);
+      setProjectDir(null);
       editor.loadProject(cleared);
       setVariables({});
       setSelectedId(null);
-      setOkStatus("Fluxo limpo");
+      setOkStatus("Fluxo limpo — escolha a pasta no Save (não sobrescreve o projeto anterior)");
     } catch (e) {
       setErrStatus(`Limpar fluxo falhou: ${formatError(e)}`);
     }
