@@ -213,8 +213,9 @@ where
                 )?;
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
-                    summary,
+                    summary: summary.clone(),
                 };
+                runtime_event("action_executed", &node.id, &summary);
                 events.push(executed.clone());
                 on_event(executed);
             }

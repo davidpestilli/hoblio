@@ -1,0 +1,81 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "a",
+      "kind": "action",
+      "label": "a",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "antes do delay"
+      }
+    },
+    {
+      "id": "d",
+      "kind": "action",
+      "label": "d",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "delay",
+        "milliseconds": 500
+      }
+    },
+    {
+      "id": "b",
+      "kind": "action",
+      "label": "b",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "depois do delay"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "a"
+    },
+    {
+      "from": "a",
+      "to": "d"
+    },
+    {
+      "from": "d",
+      "to": "b"
+    },
+    {
+      "from": "b",
+      "to": "end"
+    }
+  ]
+}

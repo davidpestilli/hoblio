@@ -1,0 +1,131 @@
+{
+  "start": "start",
+  "variables": {
+    "n": "4"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "r",
+      "kind": "repeat",
+      "label": "r",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "repeat",
+        "times": "{n}",
+        "index_variable": "LoopIndex"
+      }
+    },
+    {
+      "id": "lr",
+      "kind": "action",
+      "label": "lr",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "repeat index={LoopIndex}"
+      }
+    },
+    {
+      "id": "r0",
+      "kind": "repeat",
+      "label": "r0",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "repeat",
+        "times": "0",
+        "index_variable": "i0"
+      }
+    },
+    {
+      "id": "l0",
+      "kind": "action",
+      "label": "l0",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "BUG body of repeat 0 executed"
+      }
+    },
+    {
+      "id": "ld",
+      "kind": "action",
+      "label": "ld",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "repeat done"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "r"
+    },
+    {
+      "from": "r",
+      "to": "lr",
+      "port": "body"
+    },
+    {
+      "from": "lr",
+      "to": "r"
+    },
+    {
+      "from": "r",
+      "to": "r0",
+      "port": "after"
+    },
+    {
+      "from": "r0",
+      "to": "l0",
+      "port": "body"
+    },
+    {
+      "from": "l0",
+      "to": "r0"
+    },
+    {
+      "from": "r0",
+      "to": "ld",
+      "port": "after"
+    },
+    {
+      "from": "ld",
+      "to": "end"
+    }
+  ]
+}

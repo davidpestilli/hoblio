@@ -12,7 +12,10 @@ static FILE_GUARD: OnceLock<tracing_appender::non_blocking::WorkerGuard> = OnceL
 
 /// Human-readable logs on stderr; with `jsonl`, append JSON lines to `<project>/.hoblio/run.jsonl`.
 pub fn init(project_root: Option<&Path>, jsonl: bool) -> Result<()> {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        // chromiumoxide emits noisy WS parse warnings at warn level during normal runs.
+        EnvFilter::new("info,chromiumoxide=error")
+    });
 
     let stderr = tracing_subscriber::fmt::layer()
         .with_target(false)

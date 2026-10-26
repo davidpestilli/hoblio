@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use hoblio_model::ActionKind;
 
 use crate::expr::parse_number;
@@ -19,8 +19,11 @@ pub fn adjust_variable(
         None => "1".into(),
     };
     let delta = parse_number(&amount_raw)? * sign;
-    let current = vars.get(name).map(|s| s.as_str()).unwrap_or("0");
-    let base = parse_number(current).unwrap_or(0.0);
+    let base = match vars.get(name) {
+        None => 0.0,
+        Some(current) => parse_number(current)
+            .with_context(|| format!("variable `{name}` must be numeric for increase/decrease"))?,
+    };
     let new_val = base + delta;
     let stored = format_number(new_val);
     vars.insert(name.to_string(), stored.clone());
@@ -59,5 +62,13 @@ mod tests {
         let mut vars = RunVariables::new();
         adjust_variable(&mut vars, "counter", None, 1.0).unwrap();
         assert_eq!(vars.get("counter").map(|s| s.as_str()), Some("1"));
+    }
+
+    #[test]
+    fn increase_rejects_non_numeric_value() {
+        let mut vars = RunVariables::new();
+        vars.insert("v".into(), "abc".into());
+        assert!(adjust_variable(&mut vars, "v", None, 1.0).is_err());
+        assert_eq!(vars.get("v").map(|s| s.as_str()), Some("abc"));
     }
 }

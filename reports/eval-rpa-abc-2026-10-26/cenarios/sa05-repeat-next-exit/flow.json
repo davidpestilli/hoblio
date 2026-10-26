@@ -1,0 +1,156 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "r",
+      "kind": "repeat",
+      "label": "r",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "repeat",
+        "times": "5",
+        "index_variable": "LoopIndex"
+      }
+    },
+    {
+      "id": "is1",
+      "kind": "if",
+      "label": "is1",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "if",
+        "left": "{LoopIndex}",
+        "operator": "eq",
+        "right": "1"
+      }
+    },
+    {
+      "id": "nx",
+      "kind": "next_loop",
+      "label": "nx",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "is3",
+      "kind": "if",
+      "label": "is3",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "if",
+        "left": "{LoopIndex}",
+        "operator": "eq",
+        "right": "3"
+      }
+    },
+    {
+      "id": "ex",
+      "kind": "exit_loop",
+      "label": "ex",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "lr",
+      "kind": "action",
+      "label": "lr",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "r={LoopIndex}"
+      }
+    },
+    {
+      "id": "ld",
+      "kind": "action",
+      "label": "ld",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "repeat out"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "r"
+    },
+    {
+      "from": "r",
+      "to": "is1",
+      "port": "body"
+    },
+    {
+      "from": "is1",
+      "to": "nx",
+      "port": "then"
+    },
+    {
+      "from": "is1",
+      "to": "is3",
+      "port": "else"
+    },
+    {
+      "from": "is3",
+      "to": "ex",
+      "port": "then"
+    },
+    {
+      "from": "is3",
+      "to": "lr",
+      "port": "else"
+    },
+    {
+      "from": "lr",
+      "to": "r"
+    },
+    {
+      "from": "r",
+      "to": "ld",
+      "port": "after"
+    },
+    {
+      "from": "ld",
+      "to": "end"
+    }
+  ]
+}

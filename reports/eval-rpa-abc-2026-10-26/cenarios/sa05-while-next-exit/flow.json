@@ -1,0 +1,176 @@
+{
+  "start": "start",
+  "variables": {
+    "counter": "0"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "w",
+      "kind": "while_loop",
+      "label": "w",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "while",
+        "left": "{counter}",
+        "operator": "lt",
+        "right": "5"
+      }
+    },
+    {
+      "id": "inc",
+      "kind": "action",
+      "label": "inc",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "increase_variable",
+        "variable": "counter"
+      }
+    },
+    {
+      "id": "is2",
+      "kind": "if",
+      "label": "is2",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "if",
+        "left": "{counter}",
+        "operator": "eq",
+        "right": "2"
+      }
+    },
+    {
+      "id": "nx",
+      "kind": "next_loop",
+      "label": "nx",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "is4",
+      "kind": "if",
+      "label": "is4",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "if",
+        "left": "{counter}",
+        "operator": "eq",
+        "right": "4"
+      }
+    },
+    {
+      "id": "ex",
+      "kind": "exit_loop",
+      "label": "ex",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "lw",
+      "kind": "action",
+      "label": "lw",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "w={counter}"
+      }
+    },
+    {
+      "id": "ld",
+      "kind": "action",
+      "label": "ld",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "while out counter={counter}"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "w"
+    },
+    {
+      "from": "w",
+      "to": "inc",
+      "port": "body"
+    },
+    {
+      "from": "inc",
+      "to": "is2"
+    },
+    {
+      "from": "is2",
+      "to": "nx",
+      "port": "then"
+    },
+    {
+      "from": "is2",
+      "to": "is4",
+      "port": "else"
+    },
+    {
+      "from": "is4",
+      "to": "ex",
+      "port": "then"
+    },
+    {
+      "from": "is4",
+      "to": "lw",
+      "port": "else"
+    },
+    {
+      "from": "lw",
+      "to": "w"
+    },
+    {
+      "from": "w",
+      "to": "ld",
+      "port": "after"
+    },
+    {
+      "from": "ld",
+      "to": "end"
+    }
+  ]
+}

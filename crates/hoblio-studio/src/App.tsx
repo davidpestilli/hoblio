@@ -356,7 +356,7 @@ export default function App() {
             BrowserClick
           </button>
           <button type="button" onClick={() => addAction("browser_wait_navigation")}>
-            BrowserWaitNavigation
+            Wait navigation
           </button>
           <button type="button" onClick={() => addAction("browser_fill")}>
             BrowserFill

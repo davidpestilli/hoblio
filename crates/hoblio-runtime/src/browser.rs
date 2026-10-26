@@ -44,6 +44,7 @@ impl BrowserContext {
         self.rt.block_on(async move {
             if let Some(mut session) = inner.lock().await.take() {
                 session.browser.close().await.ok();
+                tokio::time::sleep(Duration::from_millis(250)).await;
                 session._handler.abort();
             }
         });

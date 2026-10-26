@@ -1,0 +1,43 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "nx",
+      "kind": "next_loop",
+      "label": "nx",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "nx"
+    },
+    {
+      "from": "nx",
+      "to": "end"
+    }
+  ]
+}

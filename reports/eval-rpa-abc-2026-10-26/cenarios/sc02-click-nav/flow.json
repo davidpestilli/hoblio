@@ -1,0 +1,102 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "nav",
+      "kind": "action",
+      "label": "nav",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "browser_navigate",
+        "url": "https://example.com",
+        "wait_ms": 500
+      }
+    },
+    {
+      "id": "clk",
+      "kind": "action",
+      "label": "clk",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "browser_click",
+        "selector": "a",
+        "timeout_ms": 15000,
+        "wait_for_navigation": true
+      }
+    },
+    {
+      "id": "gt",
+      "kind": "action",
+      "label": "gt",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "browser_get_text",
+        "selector": "h1",
+        "variable": "h"
+      }
+    },
+    {
+      "id": "l",
+      "kind": "action",
+      "label": "l",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "pagina apos clique h1=[{h}]"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "nav"
+    },
+    {
+      "from": "nav",
+      "to": "clk"
+    },
+    {
+      "from": "clk",
+      "to": "gt"
+    },
+    {
+      "from": "gt",
+      "to": "l"
+    },
+    {
+      "from": "l",
+      "to": "end"
+    }
+  ]
+}

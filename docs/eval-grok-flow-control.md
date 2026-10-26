@@ -4,7 +4,7 @@ Protocolo para um agente (Grok bot / CI local) validar a fatia **If + ForEach + 
 
 **Repositório:** `E:\Projetos\hoblio` (ajuste o caminho se o clone for outro).
 
-**Critério de sucesso global:** script `scripts/eval-flow-control.ps1` termina com **exit code 0** e `GROK_EVAL: SUMMARY pass=21 fail=0`.
+**Critério de sucesso global:** script `scripts/eval-flow-control.ps1` termina com **exit code 0** e `GROK_EVAL: SUMMARY pass=24 fail=0` (um T-V por pasta `examples/*` com manifest).
 
 Reteste Studio + prioridades: [eval-grok-retest-priorities.md](eval-grok-retest-priorities.md).
 

@@ -1,0 +1,52 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "rd",
+      "kind": "action",
+      "label": "rd",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "file_read",
+        "path": "x.txt",
+        "variable": "c"
+      },
+      "error_handling": {
+        "retry_count": 1000,
+        "on_failure": "continue"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "rd"
+    },
+    {
+      "from": "rd",
+      "to": "end"
+    }
+  ]
+}

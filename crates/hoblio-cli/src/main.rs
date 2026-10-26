@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use hoblio_log::init as init_log;
+use hoblio_runtime::{RunEvent, run_project_with_listener};
 use hoblio_serde::{load_project, validate_project_dir};
 
 #[derive(Parser)]
@@ -33,7 +34,11 @@ fn main() -> Result<()> {
         Commands::Run { project_dir, jsonl } => {
             init_log(Some(&project_dir), jsonl)?;
             let project = load_project(&project_dir)?;
-            let outcome = hoblio_runtime::run_with_root(&project, Some(project_dir.as_path()))?;
+            let outcome = run_project_with_listener(&project, Some(project_dir.as_path()), |event| {
+                if let RunEvent::ActionExecuted { summary, .. } = event {
+                    println!("{summary}");
+                }
+            })?;
             eprintln!(
                 "run complete: project={} last_node={}",
                 project.manifest.name, outcome.last_node_id

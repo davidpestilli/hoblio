@@ -1,0 +1,70 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "rd",
+      "kind": "action",
+      "label": "rd",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "file_read",
+        "path": "output/nao-existe.txt",
+        "variable": "c"
+      },
+      "error_handling": {
+        "retry_count": 1,
+        "retry_delay_ms": 100,
+        "on_failure": "continue"
+      }
+    },
+    {
+      "id": "l",
+      "kind": "action",
+      "label": "l",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "continuou apos falha"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "rd"
+    },
+    {
+      "from": "rd",
+      "to": "l"
+    },
+    {
+      "from": "l",
+      "to": "end"
+    }
+  ]
+}

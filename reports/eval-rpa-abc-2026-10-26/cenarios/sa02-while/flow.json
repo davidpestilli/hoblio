@@ -1,0 +1,108 @@
+{
+  "start": "start",
+  "variables": {
+    "counter": "0"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "w",
+      "kind": "while_loop",
+      "label": "w",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "while",
+        "left": "{counter}",
+        "operator": "lt",
+        "right": "3"
+      }
+    },
+    {
+      "id": "lb",
+      "kind": "action",
+      "label": "lb",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "while body counter={counter}"
+      }
+    },
+    {
+      "id": "inc",
+      "kind": "action",
+      "label": "inc",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "increase_variable",
+        "variable": "counter"
+      }
+    },
+    {
+      "id": "ld",
+      "kind": "action",
+      "label": "ld",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "done counter={counter}"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "w"
+    },
+    {
+      "from": "w",
+      "to": "lb",
+      "port": "body"
+    },
+    {
+      "from": "lb",
+      "to": "inc"
+    },
+    {
+      "from": "inc",
+      "to": "w"
+    },
+    {
+      "from": "w",
+      "to": "ld",
+      "port": "after"
+    },
+    {
+      "from": "ld",
+      "to": "end"
+    }
+  ]
+}

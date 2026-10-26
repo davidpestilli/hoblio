@@ -1,0 +1,81 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "nav",
+      "kind": "action",
+      "label": "nav",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "browser_navigate",
+        "url": "https://example.com"
+      }
+    },
+    {
+      "id": "wn",
+      "kind": "action",
+      "label": "wn",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "browser_wait_navigation",
+        "timeout_ms": 8000
+      }
+    },
+    {
+      "id": "l",
+      "kind": "action",
+      "label": "l",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "wait navigation ok"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "nav"
+    },
+    {
+      "from": "nav",
+      "to": "wn"
+    },
+    {
+      "from": "wn",
+      "to": "l"
+    },
+    {
+      "from": "l",
+      "to": "end"
+    }
+  ]
+}

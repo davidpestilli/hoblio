@@ -126,7 +126,7 @@ Write-Eval "T-B03" $emptyVars "project variables empty; list built at run"
 $resPath = Join-Path $RepoRoot "examples\resilience-demo"
 $r = Run-Cli "run" $resPath
 Write-Eval "T-C01" (($r.Code -eq 0) -and ($r.Out -match "last_node=end"))
-Write-Eval "T-C02" ($r.Out -match "action_retry") "retry logged before continue"
+Write-Eval "T-C02" ($r.Out -match "failed \(continued\)") "continue summary on stdout"
 Write-Eval "T-C03" ($r.Out -match "continued after read failure")
 
 # Stop on error (no continue) must fail run

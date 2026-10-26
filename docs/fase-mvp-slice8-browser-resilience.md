@@ -49,4 +49,4 @@ cargo test -p hoblio-runtime --lib resilience_demo_runs
 
 ## Studio
 
-Paleta: **Delay**, **BrowserWaitNavigation**; em **BrowserClick** — checkboxes/campos de wait; painel **Error handling** em nós de ação.
+Paleta: **Delay**, **Wait navigation**; em **BrowserClick** — checkboxes/campos de wait; painel **Error handling** em nós de ação. Resumos de ação no stdout do CLI e em `--jsonl` (`action_executed`).

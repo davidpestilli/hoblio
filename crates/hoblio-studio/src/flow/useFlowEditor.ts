@@ -28,6 +28,13 @@ import type { Waypoint } from "../model";
 
 const HISTORY_LIMIT = 40;
 
+/** Spread new nodes on a grid so control/action nodes do not stack on top of each other. */
+function spawnPosition(index: number, baseX: number, baseY: number): { x: number; y: number } {
+  const col = index % 4;
+  const row = Math.floor(index / 4);
+  return { x: baseX + col * 200, y: baseY + row * 120 };
+}
+
 interface CanvasSnapshot {
   nodes: HoblioFlowNode[];
   edges: HoblioFlowEdge[];
@@ -479,9 +486,8 @@ export function useFlowEditor(
       >,
     ) => {
       const id = `${kind}_${Date.now().toString(36)}`;
-      const offset = spawnOffsetRef.current++ * 28;
-      const x = 280 + offset;
-      const y = 200 + offset;
+      const idx = spawnOffsetRef.current++;
+      const { x, y } = spawnPosition(idx, 240, 80);
       const controlKinds = ["if", "for_each", "while_loop", "repeat"] as const;
       const labelByKind: Partial<Record<NodeKind, string>> = {
         for_each: "For each",
@@ -513,9 +519,8 @@ export function useFlowEditor(
   const addAction = useCallback(
     (type: ActionKind["type"], seedVariables?: Record<string, unknown>) => {
       const id = newActionNodeId();
-      const offset = spawnOffsetRef.current++ * 28;
-      const x = 240 + offset;
-      const y = 240 + offset;
+      const idx = spawnOffsetRef.current++;
+      const { x, y } = spawnPosition(idx, 200, 320);
       const flowNodes = snapshotRef.current.nodes.map((n) => n.data.flowNode);
       const taken = collectTakenVariableNames(flowNodes, seedVariables ?? {});
       const flowNode: FlowNode = {

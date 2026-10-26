@@ -1,0 +1,66 @@
+{
+  "start": "start",
+  "variables": {
+    "v": "abc"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "i",
+      "kind": "action",
+      "label": "i",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "increase_variable",
+        "variable": "v"
+      }
+    },
+    {
+      "id": "l",
+      "kind": "action",
+      "label": "l",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "v={v}"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "i"
+    },
+    {
+      "from": "i",
+      "to": "l"
+    },
+    {
+      "from": "l",
+      "to": "end"
+    }
+  ]
+}

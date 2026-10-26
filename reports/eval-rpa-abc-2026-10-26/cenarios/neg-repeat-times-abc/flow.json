@@ -1,0 +1,71 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "r",
+      "kind": "repeat",
+      "label": "r",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "control": {
+        "type": "repeat",
+        "times": "abc",
+        "index_variable": "i"
+      }
+    },
+    {
+      "id": "l",
+      "kind": "action",
+      "label": "l",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "x"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "r"
+    },
+    {
+      "from": "r",
+      "to": "l",
+      "port": "body"
+    },
+    {
+      "from": "l",
+      "to": "r"
+    },
+    {
+      "from": "r",
+      "to": "end",
+      "port": "after"
+    }
+  ]
+}

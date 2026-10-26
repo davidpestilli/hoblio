@@ -168,7 +168,7 @@ Reteste o repositório Hoblio conforme docs/eval-grok-retest-priorities.md.
 
 | Camada | Critério |
 |--------|----------|
-| **Harness** | 21 PASS, 0 FAIL, exit 0 |
+| **Harness** | 24 PASS, 0 FAIL, exit 0 (`eval-flow-control.ps1`) |
 | **Alta prioridade Studio** | C1, B4, B7, B8, B10, B13 → PASS |
 | **Baixa prioridade** | Pelo menos T-F01 + 4 itens UX (log, fitView, vars, keys ou reject ou stop) → PASS |
 | **Global** | Harness **APROVADO** e Studio **APROVADO** ou **APROVADO COM RESSALVAS** (no máximo B12 SKIP por SO) |

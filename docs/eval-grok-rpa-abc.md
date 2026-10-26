@@ -38,6 +38,8 @@ GROK_EVAL: <TEST_ID> PASS|<FAIL> [<detalhe>]
 GROK_EVAL: SUMMARY pass=<n> fail=<n>
 ```
 
+**CLI `run`:** cada ação imprime uma linha de resumo no stdout (ex.: `failed (continued): …`). Com `--jsonl`, o mesmo aparece em `.hoblio/run.jsonl` como evento `action_executed` (campo `detail`).
+
 ---
 
 ## 3. Matriz de testes (script)
@@ -81,7 +83,7 @@ GROK_EVAL: SUMMARY pass=<n> fail=<n>
 | ID | Assertiva |
 |----|-----------|
 | T-C01 | `run resilience-demo` → `last_node=end` |
-| T-C02 | stdout contém `failed (continued)` |
+| T-C02 | stdout contém `failed (continued)` (resumo `ActionExecuted` impresso pelo CLI) |
 | T-C03 | stdout contém `continued after read failure` |
 | T-C04 | Cópia temp com `on_failure: stop` → **run exit ≠ 0** |
 

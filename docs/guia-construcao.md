@@ -194,7 +194,7 @@ npm run build   # tsc --noEmit && vite build
 |------|--------|
 | **`validate_project`** | Grafo + listas ForEach + produtores de variável (duplicados / nomes inválidos) + next/exit no corpo |
 | **`examples/flow-control-demo`** | If + ForEach + variáveis `flag` / `items` |
-| **`scripts/eval-flow-control.ps1`** | Harness Grok/CI — esperado **21 PASS, 0 FAIL** |
+| **`scripts/eval-flow-control.ps1`** | Harness Grok/CI — esperado **24 PASS, 0 FAIL** (inclui validate de cada `examples/*` com manifest) |
 | **Docs de avaliação** | [eval-grok-flow-control.md](eval-grok-flow-control.md), [eval-grok-retest-priorities.md](eval-grok-retest-priorities.md) |
 
 ```powershell
@@ -251,7 +251,7 @@ Listas em run são **JSON array** em string (mesmo formato que listas em Project
 
 | Script | Escopo |
 |--------|--------|
-| `scripts/eval-flow-control.ps1` | Slice 5 — If/ForEach (**21 PASS** esperado) |
+| `scripts/eval-flow-control.ps1` | Slice 5 — If/ForEach (**24 PASS** esperado) |
 | `scripts/eval-rpa-abc.ps1` | Slices 6–8 + regressão `flow-control-demo` + build Studio |
 
 Documentação detalhada para o Grok bot: [eval-grok-rpa-abc.md](eval-grok-rpa-abc.md) (matriz CLI + cenários manuais Studio).

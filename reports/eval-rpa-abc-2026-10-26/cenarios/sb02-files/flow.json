@@ -1,0 +1,101 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "start",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "w",
+      "kind": "action",
+      "label": "w",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "file_write",
+        "path": "output/test.txt",
+        "content": "linha1\n"
+      }
+    },
+    {
+      "id": "ap",
+      "kind": "action",
+      "label": "ap",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "file_append",
+        "path": "output/test.txt",
+        "content": "linha2 acentuação\n"
+      }
+    },
+    {
+      "id": "rd",
+      "kind": "action",
+      "label": "rd",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "file_read",
+        "path": "output/test.txt",
+        "variable": "txt"
+      }
+    },
+    {
+      "id": "l",
+      "kind": "action",
+      "label": "l",
+      "ui": {
+        "x": 0,
+        "y": 0
+      },
+      "action": {
+        "type": "log",
+        "message": "conteudo=[{txt}]"
+      }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "end",
+      "ui": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "start",
+      "to": "w"
+    },
+    {
+      "from": "w",
+      "to": "ap"
+    },
+    {
+      "from": "ap",
+      "to": "rd"
+    },
+    {
+      "from": "rd",
+      "to": "l"
+    },
+    {
+      "from": "l",
+      "to": "end"
+    }
+  ]
+}
