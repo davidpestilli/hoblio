@@ -34,13 +34,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps
 
 Studio: Open `examples/flow-control-demo`, clique no canvas, em **Project variables** altere `flag` ou itens da lista `items` (**+ Item** / **Variables**), Run.
 
-### Project variables (UI visual)
+### Variáveis (UI + PAD-style, pós-slice 5)
 
-Entregue após o slice 5 — documentação em [guia-construcao.md §4](guia-construcao.md#project-variables-studio):
+Documentação completa: [guia-construcao.md §4 — Variáveis no Studio](guia-construcao.md).
 
-- `ProjectVariablesPanel.tsx` + `projectVariables.ts` — escalares, listas, JSON avançado.
-- Formato em disco inalterado (`variables` objeto no `flow.json`).
-- Próximo passo sugerido: ações de runtime no grafo (set / append list).
+- **Project variables** — seeds (`ProjectVariablesPanel`, escalares/listas, Advanced JSON); correção de foco ao digitar (keys estáveis por índice).
+- **Flow variables** — índice de produtores no canvas; **Set variable** e **Output variable** em BrowserGetText; defaults `BrowserText1` / `Var1`; `set_variable` no model/runtime/validate.
+- Seed em disco: `flow.json` → `variables`. Produção no run: campos nos nós + execução.
+- Próximo passo: validar `{refs}` desconhecidas; listas só via ações; increment/decrease.
 
 ## Limitações (slice 5)
 

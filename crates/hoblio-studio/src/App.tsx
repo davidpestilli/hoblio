@@ -12,6 +12,7 @@ import {
   type FlowProject,
   type ActionKind,
 } from "./model";
+import { renameVariableInSeed } from "./flowVariables";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { RunLogPanel } from "./RunLogPanel";
 import { logLineFromEvent, type LogLine, type RunEvent } from "./runLog";
@@ -287,7 +288,20 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [editor]);
 
-  const addAction = (type: ActionKind["type"]) => editor.addAction(type);
+  const flowNodes = useMemo(
+    () => editor.nodes.map((n) => n.data.flowNode),
+    [editor.nodes],
+  );
+
+  const addAction = (type: ActionKind["type"]) => editor.addAction(type, variables);
+
+  const handleRenameFlowVariable = useCallback(
+    (oldName: string, newName: string) => {
+      editor.applyVariableRename(oldName, newName);
+      setVariables((current) => renameVariableInSeed(current, oldName, newName));
+    },
+    [editor],
+  );
 
   return (
     <div className="app">
@@ -345,6 +359,11 @@ export default function App() {
             ShowMessage
           </button>
           <hr className="palette-divider" />
+          <h4 className="palette-group">Variables</h4>
+          <button type="button" onClick={() => addAction("set_variable")}>
+            Set variable
+          </button>
+          <hr className="palette-divider" />
           <h4 className="palette-group">Condicionais</h4>
           <button type="button" onClick={() => editor.addControlNode("if")}>
             If
@@ -373,9 +392,12 @@ export default function App() {
         </div>
         <PropertiesPanel
           node={selectedNode}
+          flowNodes={flowNodes}
           editing={editor.editing}
           variables={variables}
           onVariablesChange={setVariables}
+          onSelectFlowNode={setSelectedId}
+          onRenameFlowVariable={handleRenameFlowVariable}
           onChange={(node, options) => editor.updateFlowNode(node, options)}
           onPropertyCommit={() => editor.commitHistory()}
           onDelete={

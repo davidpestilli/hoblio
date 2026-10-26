@@ -1,6 +1,6 @@
 # Hoblio — Guia de construção e desenvolvimento
 
-Documento consolidado para **montar, compilar e estender** o sistema. Estado reflete o repo em `master` após **slice 5** (controle de fluxo If/ForEach + Studio) e o editor visual de **Project variables** no Studio.
+Documento consolidado para **montar, compilar e estender** o sistema. Estado reflete o repo em `master` após **slice 5** (If/ForEach + Studio), o editor **Project variables**, e o modelo de variáveis **estilo PAD** (`set_variable`, outputs de ações, índice **Flow variables**, validação de produtores).
 
 Para histórico por entrega, veja também: [Fase 0](fase-0.md), [Slice 1](fase-mvp-slice1.md) · [2](fase-mvp-slice2.md) · [3 browser](fase-mvp-slice3-browser.md) · [4 flow editor](fase-mvp-slice4-flow-editor.md) · **[5 flow control](fase-mvp-slice5-flow-control.md)**.
 
@@ -143,22 +143,39 @@ Implementação em `crates/hoblio-studio/src/flow/` (React Flow 12), inspirada n
 
 Detalhes: [slice 4](fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEach](fase-mvp-slice5-flow-control.md).
 
-### Project variables (Studio)
+### Variáveis no Studio (PAD-style)
 
-Sem nó selecionado (clique no canvas), o painel direito mostra **Project variables** — valores iniciais do run, persistidos em `flow.json` → `variables` (mesmo formato de antes: objeto JSON chave → valor).
+Dois papéis, como no Power Automate for desktop:
+
+| Papel | Onde | Disco / run |
+|--------|------|-------------|
+| **Valores iniciais (seed)** | Painel **Project variables** (canvas sem seleção) | `flow.json` → `variables` |
+| **Variáveis produzidas no fluxo** | Campo **Output variable** nos nós; índice **Flow variables** | Campos no nó (`browser_get_text.variable`, `set_variable.variable`, `for_each.item_variable`); valor preenchido na **execução** |
+
+Sem nó selecionado, o painel direito mostra **Flow variables** (índice somente leitura, link para o nó produtor) e **Project variables** abaixo.
 
 | Módulo | Função |
 |--------|--------|
-| `ProjectVariablesPanel.tsx` | UI: seções **Variables** (Text / Number / Boolean) e **Lists** (itens linha a linha); botões **+ Variable** / **+ List** |
-| `projectVariables.ts` | Particiona o objeto (`partitionVariables`), remonta ao salvar (`buildVariables`), nomes de listas/escalares para propriedades de nós |
-| `PropertiesPanel.tsx` | Integra o painel; **For each** → `<select>` das listas do projeto; **If** → datalist `{nome}`; **Log** → hint com variáveis escalares |
-| `App.tsx` | Estado `variables: Record<string, unknown>`; Save / Validate / Run usam esse objeto (não dependem de JSON válido no modo visual) |
+| `flowVariables.ts` | `collectFlowVariableProducers`, nomes ocupados, renomear no grafo (`{nome}`), picker unificado |
+| `actionOutputDefaults.ts` | Nomes padrão ao inserir ação (`BrowserText1`, `Var1`, …) |
+| `FlowVariablesOverview.tsx` | Seção **Flow variables** no painel do canvas |
+| `ProjectVariablesPanel.tsx` | **Variables** / **Lists** / **Advanced JSON**; chaves React estáveis por índice (evita perder foco ao digitar) |
+| `projectVariables.ts` | `partitionVariables` / `buildVariables` (ordem de inserção no objeto, sem re-sort ao editar) |
+| `PropertiesPanel.tsx` | **Output variable** em BrowserGetText e SetVariable; renomear propaga refs; If/Log/FileWrite usam seeds + produtores |
+| `useFlowEditor.ts` | `addAction(..., seedVariables)` para defaults únicos; `applyVariableRename` |
+| `App.tsx` | Paleta **Variables → Set variable**; estado `variables`; Save / Validate / Run |
 
-**Advanced JSON** ( `<details>` ): textarea legado para colar/importar ou editar valores aninhados (objetos JSON que a UI visual não expõe — aviso no painel).
+**Advanced JSON** ( `<details>` ): colar/importar ou editar valores aninhados que a UI visual não expõe.
 
-**Runtime / CLI:** inalterado — `hoblio-runtime` `seed_from_project`, ForEach, interpolação `{nome}`; `validate_project` continua exigindo que `list_variable` exista em `variables`.
+**Modelo / runtime (`hoblio-model`, `hoblio-runtime`):**
 
-**Fora do escopo desta entrega:** nós no grafo para mutar variáveis em runtime (`set variable`, `add to list`, etc.) — planejado como próximo passo.
+- Ação **`set_variable`**: `{ "type": "set_variable", "variable": "nome", "value": "texto ou {outra}" }`.
+- **`ActionKind::produced_variables()`** — metadado “Variables produced” (`browser_get_text`, `set_variable`).
+- **`validate_project`**: nome inválido, `set_variable` sem nome, **produtor duplicado** (inclui `item_variable` do For each).
+
+**Runtime:** `seed_from_project` + `browser_get_text` + `set_variable` + item ForEach → mapa de run; interpolação `{nome}` em `log`, `file_write`, `set_variable.value`, operandos If.
+
+**Ainda fora do escopo:** validação estática de `{refs}` desconhecidas; listas criadas só por ações (For each continua exigindo lista em `variables`); increment/decrease, subflows com escopo local.
 
 Build frontend:
 
@@ -175,7 +192,7 @@ npm run build   # tsc --noEmit && vite build
 
 | Peça | Função |
 |------|--------|
-| **`validate_project`** | Grafo + variáveis (listas ForEach, next/exit dentro do corpo) |
+| **`validate_project`** | Grafo + listas ForEach + produtores de variável (duplicados / nomes inválidos) + next/exit no corpo |
 | **`examples/flow-control-demo`** | If + ForEach + variáveis `flag` / `items` |
 | **`scripts/eval-flow-control.ps1`** | Harness Grok/CI — esperado **21 PASS, 0 FAIL** |
 | **Docs de avaliação** | [eval-grok-flow-control.md](eval-grok-flow-control.md), [eval-grok-retest-priorities.md](eval-grok-retest-priorities.md) |
@@ -194,7 +211,7 @@ Runtime: `cargo test -p hoblio-runtime --lib` (evita testes de browser opcionais
 |--------|---------|
 | **Biblioteca** | `chromiumoxide` **0.9** (CDP compatível com Chrome/Edge recentes) |
 | **Executável** | Detecção automática de `chrome.exe` / `msedge.exe` (`crates/hoblio-runtime/src/chromium_exe.rs`) — caminhos padrão Windows, como RPA desktop (ex. Power Automate). Override: `HOBLIO_CHROME_PATH` |
-| **Variáveis** | Em `flow.json` → `variables`; Studio edita no painel **Project variables** (visual + Advanced JSON). Runtime: `browser_get_text`, ForEach, interpolação `{nome}` em `log` / `file_write` |
+| **Variáveis** | Seed em `flow.json` → `variables` (**Project variables**). Run: `browser_get_text`, **`set_variable`**, ForEach, `{nome}` em textos. Studio: **Flow variables**, defaults `BrowserText1` / `Var1`, paleta **Set variable** |
 | **Caminhos `file_write`** | Relativos à **pasta do projeto** (`run` / Studio passam `projectDir`); ex.: `output/example-fetch.txt` |
 | **Demo** | `examples/browser-demo-flow` — `example.com` usa `body p` (o site não expõe mais `<h1>`) |
 | **`setup-dev.bat`** | Pré-check de espaço no C:, MSVC com carga C++, `cargo test`, `validate` nos exemplos; informa qual Chromium foi detectado; `--full` roda demos browser se houver Chrome/Edge |
@@ -248,16 +265,16 @@ cargo run -p hoblio-cli -- run examples/browser-demo-flow
 
 Logs JSONL por execução (CLI `--jsonl`): arquivos sob `.hoblio/` conforme `hoblio-log`.
 
-Interpolação `{variavel}`: variáveis de **`flow.json` → `variables`**, item de **ForEach**, e **`browser_get_text`** durante o run.
+Interpolação `{variavel}`: seeds em **`flow.json` → `variables`**, valores escritos por **`browser_get_text`**, **`set_variable`**, e **item de ForEach** durante o run.
 
 ---
 
 ## 8. Como adicionar uma nova ação
 
-1. **`hoblio-model`** — variant em `ActionKind` + struct de parâmetros + validação.
+1. **`hoblio-model`** — variant em `ActionKind` + `produced_variables()` se a ação escreve run vars + validação em `validate_project`.
 2. **`hoblio-serde`** — garantir serialização JSON (serde).
 3. **`hoblio-runtime`** — executor em `actions.rs` (ou módulo); emitir eventos `action_executed`.
-4. **`hoblio-studio`** — entrada na paleta, formulário de propriedades, mapeamento para JSON ao salvar (`flowConvert.ts` + `useFlowEditor`).
+4. **`hoblio-studio`** — paleta, **Output variable** (se produz valor), defaults em `actionOutputDefaults.ts`, registro em `flowVariables.ts`, `flowConvert.ts` + `useFlowEditor`.
 5. **`examples/`** — fluxo demo mínimo.
 6. **Teste** — unit em model/runtime; doc em `docs/fase-mvp-sliceN-….md` ou atualizar este guia.
 
@@ -282,9 +299,9 @@ meu-fluxo/
 - `waypoints`: pontos do tracado no canvas
 - `sourceHandle` / `targetHandle`: lados do conector ou nome da porta (`then`, `body`, …)
 
-**Variáveis:** objeto `variables` no `flow.json` — chaves com **array** = lista (For each); **string / number / boolean** = escalar (If, `{nome}` em textos). No Studio, use **Lists** / **Variables** ou **Advanced JSON**.
+**Variáveis (seed):** objeto `variables` — **array** = lista (For each); **string / number / boolean** = escalar. **Variáveis de run** no grafo: `browser_get_text.variable`, `set_variable` (`variable` + `value`), `for_each.item_variable`.
 
-Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. Detalhes If/ForEach: [slice 5](fase-mvp-slice5-flow-control.md); editor de variáveis: §4 **Project variables**.
+Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. If/ForEach: [slice 5](fase-mvp-slice5-flow-control.md); variáveis PAD-style: §4 **Variáveis no Studio**.
 
 ---
 

@@ -1,13 +1,24 @@
+import { useRef } from "react";
+
+import { FlowVariablesOverview } from "./FlowVariablesOverview";
+import {
+  collectTakenVariableNames,
+  scalarNamesForPicker,
+  validateProducerName,
+} from "./flowVariables";
 import type { CompareOperator, ControlKind, FlowNode, ActionKind } from "./model";
 import { actionLabel, defaultAction, patchBrowserDomAction } from "./model";
 import { ProjectVariablesPanel } from "./ProjectVariablesPanel";
-import { listVariableNames, scalarVariableNames } from "./projectVariables";
+import { listVariableNames } from "./projectVariables";
 
 type Props = {
   node: FlowNode | null;
+  flowNodes: FlowNode[];
   editing: boolean;
   variables: Record<string, unknown>;
   onVariablesChange: (variables: Record<string, unknown>) => void;
+  onSelectFlowNode?: (nodeId: string) => void;
+  onRenameFlowVariable?: (oldName: string, newName: string) => void;
   onChange: (node: FlowNode, options?: { recordHistory?: boolean }) => void;
   onPropertyCommit: () => void;
   onDelete?: () => void;
@@ -15,15 +26,19 @@ type Props = {
 
 export function PropertiesPanel({
   node,
+  flowNodes,
   editing,
   variables,
   onVariablesChange,
+  onSelectFlowNode,
+  onRenameFlowVariable,
   onChange,
   onPropertyCommit,
   onDelete,
 }: Props) {
   const readOnly = !editing;
-  const scalarVars = scalarVariableNames(variables);
+  const outputNameBeforeEdit = useRef("");
+  const scalarVars = scalarNamesForPicker(variables, flowNodes);
   const listVars = listVariableNames(variables);
 
   const draftChange = (node: FlowNode) => onChange(node, { recordHistory: false });
@@ -37,6 +52,7 @@ export function PropertiesPanel({
     return (
       <div className="panel properties">
         <h3>Project variables</h3>
+        <FlowVariablesOverview nodes={flowNodes} onSelectNode={onSelectFlowNode} />
         <ProjectVariablesPanel
           variables={variables}
           disabled={readOnly}
@@ -53,7 +69,17 @@ export function PropertiesPanel({
 
   const setActionType = (type: ActionKind["type"]) => {
     if (readOnly || node.kind !== "action") return;
-    onChange({ ...node, action: defaultAction(type) });
+    const taken = collectTakenVariableNames(flowNodes, variables);
+    onChange({ ...node, action: defaultAction(type, { takenNames: taken }) });
+  };
+
+  const commitOutputVariableRename = (previous: string, next: string) => {
+    if (readOnly || !onRenameFlowVariable) return;
+    const oldName = previous.trim();
+    const newName = next.trim();
+    if (oldName && newName && oldName !== newName) {
+      onRenameFlowVariable(oldName, newName);
+    }
   };
 
   const patchAction = (
@@ -238,6 +264,7 @@ export function PropertiesPanel({
               <option value="browser_fill">BrowserFill</option>
               <option value="browser_wait_for">BrowserWaitFor</option>
               <option value="browser_get_text">BrowserGetText</option>
+              <option value="set_variable">SetVariable</option>
               <option value="show_message">ShowMessage</option>
             </select>
           </label>
@@ -457,22 +484,99 @@ export function PropertiesPanel({
 
           {node.action.type === "browser_get_text" && (
             <label>
-              Variable name (optional, log-only for now)
+              Output variable
               <input
                 value={node.action.variable ?? ""}
+                onFocus={() => {
+                  outputNameBeforeEdit.current = node.action?.type === "browser_get_text"
+                    ? (node.action.variable ?? "")
+                    : "";
+                }}
                 onChange={(e) =>
                   draftChange({
                     ...node,
                     action: patchBrowserDomAction(
                       node.action!,
                       { variable: e.target.value || undefined },
-                      "browser_get_text"
+                      "browser_get_text",
                     ),
                   })
                 }
-                onBlur={commitDraft}
+                onBlur={(e) => {
+                  commitOutputVariableRename(outputNameBeforeEdit.current, e.target.value.trim());
+                  commitDraft();
+                }}
+                disabled={readOnly}
               />
+              {node.action.variable ? (
+                validateProducerName(node.action.variable) ? (
+                  <span className="var-field-error">
+                    {validateProducerName(node.action.variable)}
+                  </span>
+                ) : (
+                  <span className="hint">Stored at run time; use {"{name}"} in later actions.</span>
+                )
+              ) : (
+                <span className="hint">Set a name to capture text from the page.</span>
+              )}
             </label>
+          )}
+
+          {node.action.type === "set_variable" && (
+            <>
+              <label>
+                Output variable
+                <input
+                  value={node.action.variable}
+                  onFocus={() => {
+                    outputNameBeforeEdit.current =
+                      node.action?.type === "set_variable" ? node.action.variable : "";
+                  }}
+                  onChange={(e) => {
+                    if (node.action?.type !== "set_variable") return;
+                    draftChange({
+                      ...node,
+                      action: { type: "set_variable", variable: e.target.value, value: node.action.value },
+                    });
+                  }}
+                  onBlur={(e) => {
+                    commitOutputVariableRename(outputNameBeforeEdit.current, e.target.value.trim());
+                    commitDraft();
+                  }}
+                  disabled={readOnly}
+                />
+                {validateProducerName(node.action.variable) ? (
+                  <span className="var-field-error">
+                    {validateProducerName(node.action.variable)}
+                  </span>
+                ) : null}
+              </label>
+              <label>
+                Value
+                <textarea
+                  rows={3}
+                  value={node.action.value}
+                  onChange={(e) => {
+                    if (node.action?.type !== "set_variable") return;
+                    draftChange({
+                      ...node,
+                      action: {
+                        type: "set_variable",
+                        variable: node.action.variable,
+                        value: e.target.value,
+                      },
+                    });
+                  }}
+                  onBlur={commitDraft}
+                  disabled={readOnly}
+                />
+                {scalarVars.length > 0 ? (
+                  <span className="hint">
+                    Supports {"{name}"} — e.g. {scalarVars.slice(0, 3).map((n) => `{${n}}`).join(", ")}
+                  </span>
+                ) : null}
+              </label>
+            </>
           )}
         </>
       )}

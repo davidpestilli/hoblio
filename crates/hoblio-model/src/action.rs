@@ -53,6 +53,29 @@ pub enum ActionKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_seconds: Option<f64>,
     },
+    /// Assign a run variable (PAD-style Set variable).
+    SetVariable {
+        variable: String,
+        /// Supports `{other}` interpolation from existing run variables.
+        value: String,
+    },
+}
+
+impl ActionKind {
+    /// Variable names written when this action runs (PAD "Variables produced").
+    pub fn produced_variables(&self) -> Vec<&str> {
+        match self {
+            ActionKind::BrowserGetText { variable, .. } => variable
+                .as_deref()
+                .filter(|v| !v.is_empty())
+                .into_iter()
+                .collect(),
+            ActionKind::SetVariable { variable, .. } if !variable.is_empty() => {
+                vec![variable.as_str()]
+            }
+            _ => vec![],
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -105,6 +128,19 @@ mod tests {
                 variable: None
             } if selector == "h1"
         ));
+    }
+
+    #[test]
+    fn set_variable_roundtrip_and_produced() {
+        let action = ActionKind::SetVariable {
+            variable: "flag".into(),
+            value: "{other}".into(),
+        };
+        let json = serde_json::to_string(&action).unwrap();
+        assert!(json.contains("set_variable"));
+        let back: ActionKind = serde_json::from_str(&json).unwrap();
+        assert_eq!(action, back);
+        assert_eq!(back.produced_variables(), vec!["flag"]);
     }
 }
 

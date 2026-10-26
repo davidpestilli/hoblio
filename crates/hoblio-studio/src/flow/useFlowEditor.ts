@@ -20,6 +20,7 @@ import {
   sourceHandleKey,
 } from "../flowConvert";
 import type { ActionKind, FlowGraph, FlowNode, FlowProject, NodeKind } from "../model";
+import { collectTakenVariableNames, renameVariableInFlowNodes } from "../flowVariables";
 import { defaultAction, defaultControl } from "../model";
 import type { HoblioFlowEdge, HoblioFlowNode } from "./flowTypes";
 import { newEdgeId } from "./flowTypes";
@@ -105,7 +106,8 @@ export interface FlowEditorController {
   fitViewToken: number;
   toFlowGraph: () => FlowGraph;
   onConnectionRejected?: (message: string) => void;
-  addAction: (type: ActionKind["type"]) => void;
+  addAction: (type: ActionKind["type"], seedVariables?: Record<string, unknown>) => void;
+  applyVariableRename: (oldName: string, newName: string) => void;
   addControlNode: (kind: Extract<NodeKind, "if" | "for_each" | "next_loop" | "exit_loop">) => void;
   addEndNode: () => void;
   deleteSelection: () => void;
@@ -494,16 +496,18 @@ export function useFlowEditor(
   );
 
   const addAction = useCallback(
-    (type: ActionKind["type"]) => {
+    (type: ActionKind["type"], seedVariables?: Record<string, unknown>) => {
       const id = newActionNodeId();
       const offset = spawnOffsetRef.current++ * 28;
       const x = 240 + offset;
       const y = 240 + offset;
+      const flowNodes = snapshotRef.current.nodes.map((n) => n.data.flowNode);
+      const taken = collectTakenVariableNames(flowNodes, seedVariables ?? {});
       const flowNode: FlowNode = {
         id,
         kind: "action",
         label: type.replace(/_/g, " "),
-        action: defaultAction(type),
+        action: defaultAction(type, { takenNames: taken }),
         ui: { x, y },
       };
       const node: HoblioFlowNode = {
@@ -546,6 +550,24 @@ export function useFlowEditor(
       if (options?.recordHistory !== false) {
         commitHistory();
       }
+    },
+    [commitHistory, setNodes],
+  );
+
+  const applyVariableRename = useCallback(
+    (oldName: string, newName: string) => {
+      if (!oldName || !newName || oldName === newName) {
+        return;
+      }
+      setNodes((current) => {
+        const flowNodes = current.map((n) => n.data.flowNode);
+        const renamed = renameVariableInFlowNodes(flowNodes, oldName, newName);
+        return current.map((node, index) => ({
+          ...node,
+          data: { ...node.data, flowNode: renamed[index]! },
+        }));
+      });
+      commitHistory();
     },
     [commitHistory, setNodes],
   );
@@ -615,6 +637,7 @@ export function useFlowEditor(
     fitViewToken,
     toFlowGraph,
     addAction,
+    applyVariableRename,
     addControlNode,
     addEndNode,
     deleteSelection,

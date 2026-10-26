@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use hoblio_model::ActionKind;
 
 use crate::browser::BrowserContext;
@@ -51,6 +51,15 @@ pub fn execute_action(
             text,
             timeout_seconds,
         } => show_message(title, text, *timeout_seconds),
+        ActionKind::SetVariable { variable, value } => {
+            let name = variable.trim();
+            if name.is_empty() {
+                bail!("set_variable: variable name is empty");
+            }
+            let resolved = interpolate(value, vars)?;
+            vars.insert(name.to_string(), resolved.clone());
+            Ok(format!("set_variable: `{name}` = {resolved}"))
+        }
     }
 }
 

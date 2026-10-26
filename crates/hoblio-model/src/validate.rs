@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use thiserror::Error;
 
-use crate::action::NodeKind;
+use crate::action::{ActionKind, NodeKind};
 use crate::control::EdgePort;
 use crate::control::ControlKind;
 use crate::flow::{FlowGraph, NodeId};
@@ -46,6 +46,12 @@ pub enum ValidationError {
     LoopControlOutsideForEach(NodeId),
     #[error("for_each node `{0}` references unknown list variable `{1}`")]
     UnknownListVariable(NodeId, String),
+    #[error("node `{0}` uses invalid variable name `{1}`")]
+    InvalidVariableName(NodeId, String),
+    #[error("variable `{0}` is produced by both `{1}` and `{2}`")]
+    DuplicateVariableProducer(String, NodeId, NodeId),
+    #[error("node `{0}` set_variable requires a non-empty variable name")]
+    SetVariableNameMissing(NodeId),
 }
 
 pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
@@ -157,6 +163,68 @@ pub fn validate_project(project: &FlowProject) -> Result<(), ValidationError> {
     validate_graph(&project.flow)?;
     validate_for_each_list_variables(&project.flow, &project.variables)?;
     validate_loop_controls(&project.flow)?;
+    validate_variable_producers(&project.flow)?;
+    Ok(())
+}
+
+fn is_valid_variable_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+fn validate_variable_producers(graph: &FlowGraph) -> Result<(), ValidationError> {
+    let mut producers: HashMap<String, NodeId> = HashMap::new();
+
+    for node in &graph.nodes {
+        if let Some(action) = &node.action {
+            if matches!(action, ActionKind::SetVariable { variable, .. } if variable.trim().is_empty())
+            {
+                return Err(ValidationError::SetVariableNameMissing(node.id.clone()));
+            }
+            for name in action.produced_variables() {
+                if !is_valid_variable_name(name) {
+                    return Err(ValidationError::InvalidVariableName(
+                        node.id.clone(),
+                        name.to_string(),
+                    ));
+                }
+                if let Some(prev) = producers.get(name) {
+                    return Err(ValidationError::DuplicateVariableProducer(
+                        name.to_string(),
+                        prev.clone(),
+                        node.id.clone(),
+                    ));
+                }
+                producers.insert(name.to_string(), node.id.clone());
+            }
+        }
+
+        if node.kind == NodeKind::ForEach {
+            let Some(ControlKind::ForEach(cfg)) = &node.control else {
+                continue;
+            };
+            let name = cfg.item_variable.trim();
+            if name.is_empty() || !is_valid_variable_name(name) {
+                return Err(ValidationError::InvalidVariableName(
+                    node.id.clone(),
+                    cfg.item_variable.clone(),
+                ));
+            }
+            if let Some(prev) = producers.get(name) {
+                return Err(ValidationError::DuplicateVariableProducer(
+                    name.to_string(),
+                    prev.clone(),
+                    node.id.clone(),
+                ));
+            }
+            producers.insert(name.to_string(), node.id.clone());
+        }
+    }
+
     Ok(())
 }
 

@@ -121,7 +121,7 @@ export function ProjectVariablesPanel({ variables, disabled, onChange }: Props) 
                 row.name.length > 0 &&
                 scalars.filter((s) => s.name === row.name).length > 1;
               return (
-                <li key={`${index}-${row.name}`} className="var-scalar-row">
+                <li key={`scalar-${index}`} className="var-scalar-row">
                   <input
                     className="var-name"
                     placeholder="name"
@@ -210,7 +210,7 @@ export function ProjectVariablesPanel({ variables, disabled, onChange }: Props) 
               const duplicate =
                 list.name.length > 0 && lists.filter((l) => l.name === list.name).length > 1;
               return (
-                <li key={`${listIndex}-${list.name}`} className="var-list-block">
+                <li key={`list-${listIndex}`} className="var-list-block">
                   <div className="var-list-head">
                     <input
                       className="var-name"

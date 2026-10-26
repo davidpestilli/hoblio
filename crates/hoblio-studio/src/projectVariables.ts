@@ -69,7 +69,7 @@ export function partitionVariables(variables: Record<string, unknown>): {
   const lists: ListEntry[] = [];
   const otherKeys: string[] = [];
 
-  const names = Object.keys(variables).sort();
+  const names = Object.keys(variables);
   for (const name of names) {
     const value = variables[name];
     if (Array.isArray(value)) {
@@ -126,23 +126,19 @@ export function buildVariables(
 }
 
 export function listVariableNames(variables: Record<string, unknown>): string[] {
-  return Object.keys(variables)
-    .filter((key) => Array.isArray(variables[key]))
-    .sort();
+  return Object.keys(variables).filter((key) => Array.isArray(variables[key]));
 }
 
 export function scalarVariableNames(variables: Record<string, unknown>): string[] {
-  return Object.keys(variables)
-    .filter((key) => {
-      const v = variables[key];
-      return (
-        typeof v === "string" ||
-        typeof v === "number" ||
-        typeof v === "boolean" ||
-        v === null
-      );
-    })
-    .sort();
+  return Object.keys(variables).filter((key) => {
+    const v = variables[key];
+    return (
+      typeof v === "string" ||
+      typeof v === "number" ||
+      typeof v === "boolean" ||
+      v === null
+    );
+  });
 }
 
 export function uniqueVariableName(prefix: string, taken: Set<string>): string {

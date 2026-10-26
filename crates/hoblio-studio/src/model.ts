@@ -1,3 +1,5 @@
+import { defaultOutputVariableName } from "./actionOutputDefaults";
+
 export type NodeKind =
   | "start"
   | "action"
@@ -23,9 +25,14 @@ export type ActionKind =
   | { type: "browser_fill"; selector: string; text: string; timeout_ms?: number }
   | { type: "browser_wait_for"; selector: string; timeout_ms?: number }
   | { type: "browser_get_text"; selector: string; timeout_ms?: number; variable?: string }
+  | { type: "set_variable"; variable: string; value: string }
   | { type: "file_write"; path: string; content: string }
   | { type: "http_get"; url: string }
   | { type: "show_message"; title: string; text: string; timeout_seconds?: number };
+
+export type DefaultActionOptions = {
+  takenNames?: Set<string>;
+};
 
 export interface FlowNode {
   id: string;
@@ -105,6 +112,8 @@ export function actionLabel(action: ActionKind): string {
       return "BrowserWaitFor";
     case "browser_get_text":
       return "BrowserGetText";
+    case "set_variable":
+      return "SetVariable";
     case "file_write":
       return "FileWrite";
     case "http_get":
@@ -136,7 +145,11 @@ export function defaultControl(kind: "if" | "for_each"): ControlKind {
   return { type: "for_each", list_variable: "items", item_variable: "item" };
 }
 
-export function defaultAction(type: ActionKind["type"]): ActionKind {
+export function defaultAction(
+  type: ActionKind["type"],
+  options?: DefaultActionOptions,
+): ActionKind {
+  const taken = options?.takenNames ?? new Set<string>();
   switch (type) {
     case "log":
       return { type: "log", message: "Hello" };
@@ -150,8 +163,19 @@ export function defaultAction(type: ActionKind["type"]): ActionKind {
       return { type: "browser_fill", selector: "input", text: "", timeout_ms: 10000 };
     case "browser_wait_for":
       return { type: "browser_wait_for", selector: "h1", timeout_ms: 10000 };
-    case "browser_get_text":
-      return { type: "browser_get_text", selector: "h1", timeout_ms: 10000 };
+    case "browser_get_text": {
+      const variable = defaultOutputVariableName("browser_get_text", taken);
+      return {
+        type: "browser_get_text",
+        selector: "h1",
+        timeout_ms: 10000,
+        ...(variable ? { variable } : {}),
+      };
+    }
+    case "set_variable": {
+      const variable = defaultOutputVariableName("set_variable", taken) ?? "Var1";
+      return { type: "set_variable", variable, value: "" };
+    }
     case "file_write":
       return { type: "file_write", path: "output.txt", content: "Hello from Hoblio" };
     case "http_get":
