@@ -39,6 +39,10 @@ impl EdgePort {
 pub enum ControlKind {
     If(IfControl),
     ForEach(ForEachControl),
+    /// Re-evaluate `condition` on each visit; body returns to this node.
+    While(WhileControl),
+    /// Run body `times` (0-based index in `index_variable`).
+    Repeat(RepeatControl),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -58,6 +62,10 @@ pub enum CompareOperator {
     Eq,
     Ne,
     Contains,
+    Gt,
+    Gte,
+    Lt,
+    Lte,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,4 +74,18 @@ pub struct ForEachControl {
     pub list_variable: String,
     /// Variable name receiving each iteration value.
     pub item_variable: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WhileControl {
+    #[serde(flatten)]
+    pub condition: IfControl,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RepeatControl {
+    /// Literal or `{var}` — number of body iterations.
+    pub times: String,
+    /// 0-based iteration index written before each body visit.
+    pub index_variable: String,
 }

@@ -1,0 +1,5 @@
+{
+  "name": "resilience-demo",
+  "version": "0.1.0",
+  "description": "Delay, retry, and continue-on-error (delivery C)"
+}

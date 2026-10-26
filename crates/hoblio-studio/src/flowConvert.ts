@@ -22,7 +22,12 @@ function defaultSourceHandle(
   if (!flowNode) {
     return MAIN_SOURCE_HANDLE;
   }
-  if (flowNode.kind === "if" || flowNode.kind === "for_each") {
+  if (
+    flowNode.kind === "if" ||
+    flowNode.kind === "for_each" ||
+    flowNode.kind === "while_loop" ||
+    flowNode.kind === "repeat"
+  ) {
     return port;
   }
   return MAIN_SOURCE_HANDLE;
@@ -120,7 +125,12 @@ export function sourceHandleKey(
   handle: string | null | undefined,
 ): string {
   const h = handle ?? "main";
-  if (kind === "if" || kind === "for_each") {
+  if (
+    kind === "if" ||
+    kind === "for_each" ||
+    kind === "while_loop" ||
+    kind === "repeat"
+  ) {
     return CONTROL_PORTS.has(h as EdgePort) ? h : "main";
   }
   return "main";

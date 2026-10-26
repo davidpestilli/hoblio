@@ -19,6 +19,8 @@ function sourceHandles(kind: string): SourceHandle[] {
         { id: "else", position: Position.Bottom, className: "port-else" },
       ];
     case "for_each":
+    case "while_loop":
+    case "repeat":
       return [
         { id: "body", position: Position.Right, className: "port-body" },
         { id: "after", position: Position.Bottom, className: "port-after" },
@@ -34,7 +36,10 @@ export function HoblioNode(props: NodeProps<Node<HoblioNodeData>>) {
   const subtitle =
     n.kind === "action" && n.action
       ? actionLabel(n.action)
-      : n.kind === "if" || n.kind === "for_each"
+      : n.kind === "if" ||
+          n.kind === "for_each" ||
+          n.kind === "while_loop" ||
+          n.kind === "repeat"
         ? controlLabel(n.kind)
         : n.kind === "next_loop" || n.kind === "exit_loop"
           ? controlLabel(n.kind)
@@ -79,7 +84,7 @@ export function HoblioNode(props: NodeProps<Node<HoblioNodeData>>) {
           <span className="port-label port-else-label">else ↓</span>
         </div>
       )}
-      {n.kind === "for_each" && (
+      {(n.kind === "for_each" || n.kind === "while_loop" || n.kind === "repeat") && (
         <div className="hoblio-node-ports">
           <span className="port-label port-body-label">body →</span>
           <span className="port-label port-after-label">after ↓</span>

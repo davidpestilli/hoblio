@@ -3,6 +3,7 @@ import { uniqueVariableName } from "./projectVariables";
 const OUTPUT_PREFIX: Record<string, string> = {
   browser_get_text: "BrowserText",
   set_variable: "Var",
+  file_read: "FileContent",
 };
 
 export function defaultOutputVariableName(

@@ -108,7 +108,9 @@ export interface FlowEditorController {
   onConnectionRejected?: (message: string) => void;
   addAction: (type: ActionKind["type"], seedVariables?: Record<string, unknown>) => void;
   applyVariableRename: (oldName: string, newName: string) => void;
-  addControlNode: (kind: Extract<NodeKind, "if" | "for_each" | "next_loop" | "exit_loop">) => void;
+  addControlNode: (
+    kind: Extract<NodeKind, "if" | "for_each" | "while_loop" | "repeat" | "next_loop" | "exit_loop">,
+  ) => void;
   addEndNode: () => void;
   deleteSelection: () => void;
   deleteNode: (nodeId: string) => void;
@@ -470,17 +472,30 @@ export function useFlowEditor(
   );
 
   const addControlNode = useCallback(
-    (kind: Extract<NodeKind, "if" | "for_each" | "next_loop" | "exit_loop">) => {
+    (
+      kind: Extract<
+        NodeKind,
+        "if" | "for_each" | "while_loop" | "repeat" | "next_loop" | "exit_loop"
+      >,
+    ) => {
       const id = `${kind}_${Date.now().toString(36)}`;
       const offset = spawnOffsetRef.current++ * 28;
       const x = 280 + offset;
       const y = 200 + offset;
+      const controlKinds = ["if", "for_each", "while_loop", "repeat"] as const;
+      const labelByKind: Partial<Record<NodeKind, string>> = {
+        for_each: "For each",
+        if: "If",
+        while_loop: "While",
+        repeat: "Repeat",
+      };
       const flowNode: FlowNode = {
         id,
         kind,
-        label: kind === "for_each" ? "For each" : kind === "if" ? "If" : kind.replace("_", " "),
-        control:
-          kind === "if" || kind === "for_each" ? defaultControl(kind) : undefined,
+        label: labelByKind[kind] ?? kind.replace(/_/g, " "),
+        control: (controlKinds as readonly string[]).includes(kind)
+          ? defaultControl(kind as "if" | "for_each" | "while_loop" | "repeat")
+          : undefined,
         ui: { x, y },
       };
       const node: HoblioFlowNode = {

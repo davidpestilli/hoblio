@@ -1,8 +1,8 @@
 # Hoblio — Guia de construção e desenvolvimento
 
-Documento consolidado para **montar, compilar e estender** o sistema. Estado reflete o repo em `master` após **slice 5** (If/ForEach + Studio), o editor **Project variables**, e o modelo de variáveis **estilo PAD** (`set_variable`, outputs de ações, índice **Flow variables**, validação de produtores).
+Documento consolidado para **montar, compilar e estender** o sistema. Estado reflete o repo após **slices 5–8**: controle de fluxo (If/ForEach/While/Repeat), variáveis PAD-style, **entregas A/B/C** (loops numéricos, arquivos/listas em runtime, browser wait + retry/continue).
 
-Para histórico por entrega, veja também: [Fase 0](fase-0.md), [Slice 1](fase-mvp-slice1.md) · [2](fase-mvp-slice2.md) · [3 browser](fase-mvp-slice3-browser.md) · [4 flow editor](fase-mvp-slice4-flow-editor.md) · **[5 flow control](fase-mvp-slice5-flow-control.md)**.
+Para histórico por entrega: [Fase 0](fase-0.md), [1](fase-mvp-slice1.md) · [2](fase-mvp-slice2.md) · [3 browser](fase-mvp-slice3-browser.md) · [4 editor](fase-mvp-slice4-flow-editor.md) · [5 flow control](fase-mvp-slice5-flow-control.md) · **[6 loops](fase-mvp-slice6-variables-loops.md)** · **[7 arquivos/listas](fase-mvp-slice7-files-lists.md)** · **[8 resiliência](fase-mvp-slice8-browser-resilience.md)**.
 
 ---
 
@@ -23,7 +23,7 @@ Hoblio/
 
 - **Runtime 100% Rust** — compartilhado pelo CLI e pelo Studio (Tauri chama o mesmo código).
 - **Studio** — shell WebView2; editor flowchart; não é VS Code/Cursor.
-- **Persistência** — pasta de projeto com `manifest.json` + `flow.json` (JSON; grafo com ramificações If e loops ForEach).
+- **Persistência** — pasta de projeto com `manifest.json` + `flow.json` (JSON; If, loops ForEach/While/Repeat, `error_handling` opcional em nós de ação).
 
 Decisões de produto: [decisoes-produto.md](decisoes-produto.md).
 
@@ -175,7 +175,7 @@ Sem nó selecionado, o painel direito mostra **Flow variables** (índice somente
 
 **Runtime:** `seed_from_project` + `browser_get_text` + `set_variable` + item ForEach → mapa de run; interpolação `{nome}` em `log`, `file_write`, `set_variable.value`, operandos If.
 
-**Ainda fora do escopo:** validação estática de `{refs}` desconhecidas; listas criadas só por ações (For each continua exigindo lista em `variables`); increment/decrease, subflows com escopo local.
+**Ainda fora do escopo:** validação estática de `{refs}` desconhecidas; subfluxos com escopo local; ramo **On error** dedicado no grafo.
 
 Build frontend:
 
@@ -205,7 +205,65 @@ Runtime: `cargo test -p hoblio-runtime --lib` (evita testes de browser opcionais
 
 ---
 
-## 4.2 Browser (CDP), variáveis e `setup-dev`
+## 4.2 Entrega A — variáveis + loops (slice 6)
+
+| Peça | Função |
+|------|--------|
+| **Ações** | `increase_variable`, `decrease_variable`, `delay` |
+| **Nós** | `while_loop` (`control.type: while`), `repeat` (`times`, `index_variable`) |
+| **If/While** | Operadores numéricos `gt`, `gte`, `lt`, `lte` |
+| **Runtime** | `crates/hoblio-runtime/src/adjust_var.rs`, frames While/Repeat em `exec.rs` |
+| **Exemplo** | `examples/variables-loops-demo` |
+
+```powershell
+cargo run -p hoblio-cli -- run examples/variables-loops-demo
+```
+
+---
+
+## 4.3 Entrega B — arquivos + listas (slice 7)
+
+| Peça | Função |
+|------|--------|
+| **Ações** | `file_read`, `file_append`, `list_append`, `list_clear` |
+| **Módulos** | `hoblio-runtime/src/files.rs`, `lists.rs` |
+| **For each** | `list_variable` válida no **run** (não exige seed em `variables`) |
+| **Exemplo** | `examples/files-lists-demo` |
+
+Listas em run são **JSON array** em string (mesmo formato que listas em Project variables).
+
+---
+
+## 4.4 Entrega C — browser + resiliência (slice 8)
+
+| Peça | Função |
+|------|--------|
+| **browser_click** | `wait_for_navigation`, `wait_selector_after`, `wait_after_timeout_ms` |
+| **browser_wait_navigation** | Espera evento de navegação na aba |
+| **Nó** | `error_handling`: `retry_count`, `retry_delay_ms`, `on_failure` (`stop` \| `continue`) |
+| **Model** | `crates/hoblio-model/src/error_handling.rs` |
+| **Runtime** | `execute_action_with_policy` em `exec.rs` |
+| **Exemplo** | `examples/resilience-demo` |
+
+---
+
+## 4.5 Avaliação Grok (A/B/C + regressão)
+
+| Script | Escopo |
+|--------|--------|
+| `scripts/eval-flow-control.ps1` | Slice 5 — If/ForEach (**21 PASS** esperado) |
+| `scripts/eval-rpa-abc.ps1` | Slices 6–8 + regressão `flow-control-demo` + build Studio |
+
+Documentação detalhada para o Grok bot: [eval-grok-rpa-abc.md](eval-grok-rpa-abc.md) (matriz CLI + cenários manuais Studio).
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-rpa-abc.ps1
+```
+
+---
+
+## 4.6 Browser (CDP), variáveis e `setup-dev`
 
 | Tópico | Detalhe |
 |--------|---------|
@@ -235,6 +293,7 @@ cargo run -p hoblio-cli -- run <pasta-projeto> --jsonl
 ```powershell
 cargo test
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-rpa-abc.ps1
 ```
 
 Teste de browser com rede + Chrome (ignorado por padrão):
@@ -248,6 +307,9 @@ Regressão manual recomendada antes de release local:
 ```powershell
 cargo run -p hoblio-cli -- run examples/demo-flow
 cargo run -p hoblio-cli -- run examples/flow-control-demo
+cargo run -p hoblio-cli -- run examples/variables-loops-demo
+cargo run -p hoblio-cli -- run examples/files-lists-demo
+cargo run -p hoblio-cli -- run examples/resilience-demo
 cargo run -p hoblio-cli -- run examples/web-demo-flow
 cargo run -p hoblio-cli -- run examples/message-timer-demo
 cargo run -p hoblio-cli -- run examples/browser-demo-flow
@@ -292,16 +354,18 @@ meu-fluxo/
 └── flow.json        # nodes[], edges[], start, variables (opcional)
 ```
 
-**Nó (`nodes[]`):** `id`, `kind` (`start` | `action` | `end` | `if` | `for_each` | `next_loop` | `exit_loop`), `label`, `action` (se action), `control` (se If/ForEach), `ui: { x, y }`.
+**Nó (`nodes[]`):** `id`, `kind` (`start` | `action` | `end` | `if` | `for_each` | `while_loop` | `repeat` | `next_loop` | `exit_loop`), `label`, `action` (se action), `control` (If/ForEach/While/Repeat), `error_handling` (opcional, nós action), `ui: { x, y }`.
 
 **Aresta (`edges[]`):** `from`, `to`, `port` (opcional: `main`, `then`, `else`, `body`, `after`), `ui` (opcional):
 
 - `waypoints`: pontos do tracado no canvas
 - `sourceHandle` / `targetHandle`: lados do conector ou nome da porta (`then`, `body`, …)
 
-**Variáveis (seed):** objeto `variables` — **array** = lista (For each); **string / number / boolean** = escalar. **Variáveis de run** no grafo: `browser_get_text.variable`, `set_variable` (`variable` + `value`), `for_each.item_variable`.
+**Variáveis (seed):** objeto `variables` — **array** = lista (For each); **string / number / boolean** = escalar. **Variáveis de run:** outputs de ações, `set_variable`, `list_append`, item/index de loops, `file_read.variable`.
 
-Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. If/ForEach: [slice 5](fase-mvp-slice5-flow-control.md); variáveis PAD-style: §4 **Variáveis no Studio**.
+Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. Controle de fluxo: [slice 5–8](fase-mvp-slice5-flow-control.md); variáveis PAD-style: §4 **Variáveis no Studio**.
+
+**Exemplos por entrega:** `flow-control-demo` · `variables-loops-demo` · `files-lists-demo` · `resilience-demo` · `browser-demo-flow`.
 
 ---
 
@@ -313,15 +377,19 @@ Desenvolvimento local em `master`. Commits feature + mensagens descritivas. Remo
 
 ## 11. Limitações conhecidas (dev)
 
-- **If / ForEach / next / exit** entregues (slice 5); sem `switch`, `while` genérico ou subfluxos aninhados.
-- Ciclos inválidos fora de ForEach: run aborta em **10k visitas**; validate nem sempre detecta.
-- Browser: instância **controlada pelo runtime**, não attach à aba manual do usuário.
-- Excel, e-mail, HTTP avançado: fora ou adiados — ver [decisoes-produto.md](decisoes-produto.md).
+- **If / ForEach / While / Repeat / next / exit** (slices 5–6); sem `switch` ou subfluxos aninhados.
+- **Retry/continue** por nó (slice 8); sem aresta **On error** separada no grafo.
+- Ciclos inválidos fora de cabeça de loop: run aborta em **10k visitas**; validate nem sempre detecta.
+- Browser: instância **controlada pelo runtime**; `wait_for_navigation` após clique sem navegação espera até timeout.
+- `file_read` UTF-8; sem `list_length` / `list_remove` dedicados.
+- Excel, e-mail, HTTP avançado: fora ou adiados — [decisoes-produto.md](decisoes-produto.md).
 
 ---
 
 ## 12. Referências
 
+- [Avaliação Grok — entregas A/B/C](eval-grok-rpa-abc.md)
+- [Avaliação Grok — flow control (slice 5)](eval-grok-flow-control.md)
 - [Troubleshooting Windows](troubleshooting-windows.md)
 - [Estudo de viabilidade](estudo-viabilidade.md)
 - [Guia de utilização](guia-utilizacao.md)

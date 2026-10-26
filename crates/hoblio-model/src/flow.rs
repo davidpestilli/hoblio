@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::action::{ActionKind, NodeKind};
 use crate::control::{ControlKind, EdgePort};
+use crate::error_handling::ErrorHandling;
 
 pub type NodeId = String;
 
@@ -25,6 +26,8 @@ pub struct Node {
     pub control: Option<ControlKind>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ui: Option<NodeUi>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_handling: Option<ErrorHandling>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

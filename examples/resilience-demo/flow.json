@@ -1,0 +1,54 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "Start",
+      "ui": { "x": 40, "y": 160 }
+    },
+    {
+      "id": "pause",
+      "kind": "action",
+      "label": "Delay",
+      "action": { "type": "delay", "milliseconds": 10 },
+      "ui": { "x": 200, "y": 160 }
+    },
+    {
+      "id": "read_missing",
+      "kind": "action",
+      "label": "Read missing (retry)",
+      "action": {
+        "type": "file_read",
+        "path": "output/does-not-exist.txt",
+        "variable": "content"
+      },
+      "error_handling": {
+        "retry_count": 1,
+        "retry_delay_ms": 10,
+        "on_failure": "continue"
+      },
+      "ui": { "x": 360, "y": 160 }
+    },
+    {
+      "id": "log_ok",
+      "kind": "action",
+      "label": "After continue",
+      "action": { "type": "log", "message": "continued after read failure" },
+      "ui": { "x": 520, "y": 160 }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "End",
+      "ui": { "x": 680, "y": 160 }
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "pause" },
+    { "from": "pause", "to": "read_missing" },
+    { "from": "read_missing", "to": "log_ok" },
+    { "from": "log_ok", "to": "end" }
+  ]
+}

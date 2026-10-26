@@ -4,25 +4,56 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 use hoblio_log::runtime_event;
 use hoblio_model::{
-    ControlKind, EdgePort, FlowProject, NodeKind, validate_project,
+    ControlKind, EdgePort, ErrorHandling, FlowProject, NodeKind, validate_project,
 };
 
 use crate::actions::execute_action;
 use crate::cancel::{reset_run_cancel, run_cancel_requested};
 use crate::browser::BrowserContext;
 use crate::events::{RunEvent, RunOutcome};
-use crate::expr::{eval_if, list_from_vars};
+use crate::expr::{eval_if, list_from_vars, parse_number, resolve_operand};
 use crate::variables::seed_from_project;
 
 type RouteKey = (String, EdgePort);
 
 const MAX_NODE_VISITS: usize = 10_000;
 
-struct LoopFrame {
-    for_each_id: String,
-    items: Vec<String>,
-    index: usize,
-    item_var: String,
+enum LoopFrame {
+    ForEach {
+        for_each_id: String,
+        items: Vec<String>,
+        index: usize,
+        item_var: String,
+    },
+    While {
+        while_id: String,
+    },
+    Repeat {
+        repeat_id: String,
+        times: usize,
+        index: usize,
+        index_var: String,
+    },
+}
+
+fn loop_frame_id(frame: &LoopFrame) -> &str {
+    match frame {
+        LoopFrame::ForEach { for_each_id, .. } => for_each_id,
+        LoopFrame::While { while_id } => while_id,
+        LoopFrame::Repeat { repeat_id, .. } => repeat_id,
+    }
+}
+
+fn compare_op_label(op: hoblio_model::CompareOperator) -> &'static str {
+    match op {
+        hoblio_model::CompareOperator::Eq => "==",
+        hoblio_model::CompareOperator::Ne => "!=",
+        hoblio_model::CompareOperator::Contains => "contains",
+        hoblio_model::CompareOperator::Gt => ">",
+        hoblio_model::CompareOperator::Gte => ">=",
+        hoblio_model::CompareOperator::Lt => "<",
+        hoblio_model::CompareOperator::Lte => "<=",
+    }
 }
 
 pub fn run_project(project: &FlowProject) -> Result<RunOutcome> {
@@ -53,6 +84,37 @@ fn build_routes(edges: &[hoblio_model::Edge]) -> HashMap<RouteKey, String> {
         map.insert((edge.from.clone(), port), edge.to.clone());
     }
     map
+}
+
+fn execute_action_with_policy(
+    action: &hoblio_model::ActionKind,
+    policy: Option<&ErrorHandling>,
+    browser: &BrowserContext,
+    run_vars: &mut crate::variables::RunVariables,
+    project_root: Option<&Path>,
+) -> Result<String> {
+    let policy = policy.cloned().unwrap_or_default();
+    let attempts = policy.attempts();
+    let delay_ms = policy.retry_delay_ms.unwrap_or(500);
+
+    for attempt in 1..=attempts {
+        match execute_action(action, browser, run_vars, project_root) {
+            Ok(summary) => return Ok(summary),
+            Err(err) if attempt < attempts => {
+                runtime_event(
+                    "action_retry",
+                    "",
+                    &format!("attempt {attempt}/{attempts}: {err}"),
+                );
+                std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+            }
+            Err(err) if policy.continues_on_failure() => {
+                return Ok(format!("failed (continued): {err:#}"));
+            }
+            Err(err) => return Err(err),
+        }
+    }
+    unreachable!("attempts >= 1")
 }
 
 fn route_to(routes: &HashMap<RouteKey, String>, from: &str, port: EdgePort) -> Result<String> {
@@ -142,8 +204,13 @@ where
                     .action
                     .as_ref()
                     .context("action node without action")?;
-                let summary =
-                    execute_action(action, browser, &mut run_vars, project_root)?;
+                let summary = execute_action_with_policy(
+                    action,
+                    node.error_handling.as_ref(),
+                    browser,
+                    &mut run_vars,
+                    project_root,
+                )?;
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary,
@@ -161,11 +228,7 @@ where
                 let summary = format!(
                     "if {} {} {} => {}",
                     cfg.left,
-                    match cfg.operator {
-                        hoblio_model::CompareOperator::Eq => "==",
-                        hoblio_model::CompareOperator::Ne => "!=",
-                        hoblio_model::CompareOperator::Contains => "contains",
-                    },
+                    compare_op_label(cfg.operator),
                     cfg.right,
                     port.as_str()
                 );
@@ -186,23 +249,30 @@ where
                     bail!("for_each node has wrong control kind");
                 };
 
-                let returning = loop_frames
-                    .iter()
-                    .rposition(|f| f.for_each_id == node.id);
+                let returning = loop_frames.iter().rposition(|f| {
+                    matches!(
+                        f,
+                        LoopFrame::ForEach { for_each_id, .. } if for_each_id == &node.id
+                    )
+                });
 
                 let port = if let Some(pos) = returning {
                     let frame = &mut loop_frames[pos];
-                    frame.index += 1;
-                    if frame.index >= frame.items.len() {
-                        let item_var = frame.item_var.clone();
+                    let LoopFrame::ForEach {
+                        items,
+                        index,
+                        item_var,
+                        ..
+                    } = frame
+                    else {
+                        bail!("for_each frame mismatch");
+                    };
+                    *index += 1;
+                    if *index >= items.len() {
                         loop_frames.remove(pos);
-                        let _ = item_var;
                         EdgePort::After
                     } else {
-                        run_vars.insert(
-                            frame.item_var.clone(),
-                            frame.items[frame.index].clone(),
-                        );
+                        run_vars.insert(item_var.clone(), items[*index].clone());
                         EdgePort::Body
                     }
                 } else {
@@ -211,7 +281,7 @@ where
                         EdgePort::After
                     } else {
                         run_vars.insert(cfg.item_variable.clone(), items[0].clone());
-                        loop_frames.push(LoopFrame {
+                        loop_frames.push(LoopFrame::ForEach {
                             for_each_id: node.id.clone(),
                             items,
                             index: 0,
@@ -234,23 +304,160 @@ where
                 on_event(executed);
                 routed = Some(route_to(&routes, &node.id, port)?);
             }
+            NodeKind::WhileLoop => {
+                let control = node
+                    .control
+                    .as_ref()
+                    .context("while_loop node without control")?;
+                let ControlKind::While(cfg) = control else {
+                    bail!("while_loop node has wrong control kind");
+                };
+
+                let active = loop_frames.iter().any(|f| {
+                    matches!(
+                        f,
+                        LoopFrame::While { while_id } if while_id == &node.id
+                    )
+                });
+                let pass = eval_if(&cfg.condition, &run_vars)?;
+                let port = if pass {
+                    if !active {
+                        loop_frames.push(LoopFrame::While {
+                            while_id: node.id.clone(),
+                        });
+                    }
+                    EdgePort::Body
+                } else if active {
+                    loop_frames.retain(|f| {
+                        !matches!(
+                            f,
+                            LoopFrame::While { while_id } if while_id == &node.id
+                        )
+                    });
+                    EdgePort::After
+                } else {
+                    EdgePort::After
+                };
+
+                let summary = format!(
+                    "while {} {} {} => {}",
+                    cfg.condition.left,
+                    compare_op_label(cfg.condition.operator),
+                    cfg.condition.right,
+                    port.as_str()
+                );
+                let executed = RunEvent::ActionExecuted {
+                    node_id: node.id.clone(),
+                    summary,
+                };
+                events.push(executed.clone());
+                on_event(executed);
+                routed = Some(route_to(&routes, &node.id, port)?);
+            }
+            NodeKind::Repeat => {
+                let control = node
+                    .control
+                    .as_ref()
+                    .context("repeat node without control")?;
+                let ControlKind::Repeat(cfg) = control else {
+                    bail!("repeat node has wrong control kind");
+                };
+
+                let returning = loop_frames.iter().rposition(|f| {
+                    matches!(
+                        f,
+                        LoopFrame::Repeat { repeat_id, .. } if repeat_id == &node.id
+                    )
+                });
+
+                let port = if let Some(pos) = returning {
+                    let frame = &mut loop_frames[pos];
+                    let LoopFrame::Repeat {
+                        times,
+                        index,
+                        index_var,
+                        ..
+                    } = frame
+                    else {
+                        bail!("repeat frame mismatch");
+                    };
+                    *index += 1;
+                    if *index >= *times {
+                        loop_frames.remove(pos);
+                        EdgePort::After
+                    } else {
+                        run_vars.insert(index_var.clone(), index.to_string());
+                        EdgePort::Body
+                    }
+                } else {
+                    let times_raw = resolve_operand(&cfg.times, &run_vars)?;
+                    let times_f = parse_number(&times_raw)?;
+                    if times_f < 0.0 {
+                        bail!("repeat times must be >= 0");
+                    }
+                    let times = times_f.round() as usize;
+                    if times == 0 {
+                        EdgePort::After
+                    } else {
+                        run_vars.insert(cfg.index_variable.clone(), "0".into());
+                        loop_frames.push(LoopFrame::Repeat {
+                            repeat_id: node.id.clone(),
+                            times,
+                            index: 0,
+                            index_var: cfg.index_variable.clone(),
+                        });
+                        EdgePort::Body
+                    }
+                };
+
+                let summary = format!("repeat `{}` -> port {}", cfg.times, port.as_str());
+                let executed = RunEvent::ActionExecuted {
+                    node_id: node.id.clone(),
+                    summary,
+                };
+                events.push(executed.clone());
+                on_event(executed);
+                routed = Some(route_to(&routes, &node.id, port)?);
+            }
             NodeKind::NextLoop => {
                 let frame = loop_frames
                     .last_mut()
-                    .context("next_loop outside for_each")?;
-                frame.index += 1;
-                if frame.index >= frame.items.len() {
-                    let for_each_id = frame.for_each_id.clone();
-                    loop_frames.pop();
-                    routed = Some(route_to(&routes, &for_each_id, EdgePort::After)?);
-                } else {
-                    run_vars.insert(
-                        frame.item_var.clone(),
-                        frame.items[frame.index].clone(),
-                    );
-                    let for_each_id = frame.for_each_id.clone();
-                    routed = Some(route_to(&routes, &for_each_id, EdgePort::Body)?);
-                }
+                    .context("next_loop outside a loop")?;
+                routed = Some(match frame {
+                    LoopFrame::ForEach {
+                        items,
+                        index,
+                        item_var,
+                        for_each_id,
+                    } => {
+                        *index += 1;
+                        if *index >= items.len() {
+                            let id = for_each_id.clone();
+                            loop_frames.pop();
+                            route_to(&routes, &id, EdgePort::After)?
+                        } else {
+                            run_vars.insert(item_var.clone(), items[*index].clone());
+                            route_to(&routes, for_each_id, EdgePort::Body)?
+                        }
+                    }
+                    LoopFrame::While { while_id } => while_id.clone(),
+                    LoopFrame::Repeat {
+                        times,
+                        index,
+                        index_var,
+                        repeat_id,
+                    } => {
+                        *index += 1;
+                        if *index >= *times {
+                            let id = repeat_id.clone();
+                            loop_frames.pop();
+                            route_to(&routes, &id, EdgePort::After)?
+                        } else {
+                            run_vars.insert(index_var.clone(), index.to_string());
+                            route_to(&routes, repeat_id, EdgePort::Body)?
+                        }
+                    }
+                });
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary: "next_loop".into(),
@@ -259,10 +466,9 @@ where
                 on_event(executed);
             }
             NodeKind::ExitLoop => {
-                let frame = loop_frames
-                    .pop()
-                    .context("exit_loop outside for_each")?;
-                routed = Some(route_to(&routes, &frame.for_each_id, EdgePort::After)?);
+                let frame = loop_frames.pop().context("exit_loop outside a loop")?;
+                let loop_id = loop_frame_id(&frame).to_string();
+                routed = Some(route_to(&routes, &loop_id, EdgePort::After)?);
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary: "exit_loop".into(),
@@ -317,5 +523,80 @@ mod tests {
             .collect();
         assert!(logs.iter().any(|s| s.contains("branch then")));
         assert!(logs.iter().any(|s| s.contains("item=beta")));
+    }
+
+    #[test]
+    fn variables_loops_demo_runs() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/variables-loops-demo");
+        let project = load_project(&path).expect("demo project");
+        let outcome = run_project_with_listener(&project, Some(path.as_path()), |_| {})
+            .expect("run");
+        assert_eq!(outcome.last_node_id, "end");
+        let logs: Vec<_> = outcome
+            .events
+            .iter()
+            .filter_map(|e| {
+                if let RunEvent::ActionExecuted { summary, .. } = e {
+                    Some(summary.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert!(logs.iter().any(|s| s.contains("while body counter=0")));
+        assert!(logs.iter().any(|s| s.contains("done counter=4")));
+        assert!(logs.iter().any(|s| s.contains("repeat index=3")));
+    }
+
+    #[test]
+    fn files_lists_demo_runs() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/files-lists-demo");
+        let project = load_project(&path).expect("demo project");
+        let outcome = run_project_with_listener(&project, Some(path.as_path()), |_| {})
+            .expect("run");
+        assert_eq!(outcome.last_node_id, "end");
+        let logs: Vec<_> = outcome
+            .events
+            .iter()
+            .filter_map(|e| {
+                if let RunEvent::ActionExecuted { summary, .. } = e {
+                    Some(summary.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert!(logs.iter().any(|s| s.contains("item=alpha")));
+        let report_path = path.join("output/report.txt");
+        let text = std::fs::read_to_string(&report_path).expect("report file");
+        assert!(text.contains("report"));
+        assert!(text.contains("item=alpha"));
+        assert!(text.contains("item=beta"));
+        let _ = std::fs::remove_file(&report_path);
+    }
+
+    #[test]
+    fn resilience_demo_runs() {
+        let path =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/resilience-demo");
+        let project = load_project(&path).expect("demo project");
+        let outcome = run_project_with_listener(&project, Some(path.as_path()), |_| {})
+            .expect("run");
+        assert_eq!(outcome.last_node_id, "end");
+        let logs: Vec<_> = outcome
+            .events
+            .iter()
+            .filter_map(|e| {
+                if let RunEvent::ActionExecuted { summary, .. } = e {
+                    Some(summary.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert!(logs.iter().any(|s| s.contains("failed (continued)")));
+        assert!(logs.iter().any(|s| s.contains("continued after read failure")));
     }
 }

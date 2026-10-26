@@ -78,14 +78,45 @@ impl BrowserContext {
         })
     }
 
-    pub fn click(&self, selector: &str, timeout_ms: Option<u64>) -> Result<String> {
+    pub fn click(
+        &self,
+        selector: &str,
+        timeout_ms: Option<u64>,
+        wait_for_navigation: bool,
+        wait_selector_after: Option<&str>,
+        wait_after_timeout_ms: Option<u64>,
+    ) -> Result<String> {
         let selector = selector.to_string();
         let timeout = timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS);
+        let after_selector = wait_selector_after.map(|s| s.to_string());
+        let after_timeout = wait_after_timeout_ms.unwrap_or(timeout);
         self.rt.block_on(async {
             let page = self.require_page().await?;
             let element = wait_for_selector(&page, &selector, timeout).await?;
             element.click().await.context("click element")?;
-            Ok(format!("browser_click: {selector}"))
+            if wait_for_navigation {
+                wait_for_navigation_timeout(&page, timeout).await?;
+            }
+            let waited_selector = after_selector.is_some();
+            if let Some(sel) = after_selector {
+                wait_for_selector(&page, &sel, after_timeout).await?;
+            }
+            let notes = match (wait_for_navigation, waited_selector) {
+                (true, true) => " (navigation + selector)",
+                (true, false) => " (waited for navigation)",
+                (false, true) => " (waited for selector)",
+                (false, false) => "",
+            };
+            Ok(format!("browser_click: {selector}{notes}"))
+        })
+    }
+
+    pub fn wait_navigation(&self, timeout_ms: Option<u64>) -> Result<String> {
+        let timeout = timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS);
+        self.rt.block_on(async {
+            let page = self.require_page().await?;
+            wait_for_navigation_timeout(&page, timeout).await?;
+            Ok(format!("browser_wait_navigation: ok ({timeout}ms max)"))
         })
     }
 
@@ -176,7 +207,10 @@ async fn open_page_at(browser: &Browser, url: &str) -> Result<Page> {
         .context("create browser page")?;
     page.goto(url)
         .await
-        .with_context(|| format!("open browser page at {url}"))?;
+        .with_context(|| format!("open browser page at {url}"))?
+        .wait_for_navigation()
+        .await
+        .with_context(|| format!("wait for initial load of {url}"))?;
     Ok(page)
 }
 
@@ -201,6 +235,17 @@ async fn launch_session(initial_url: &str) -> Result<SessionInner> {
         _handler: handle,
         page,
     })
+}
+
+async fn wait_for_navigation_timeout(page: &Page, timeout_ms: u64) -> Result<()> {
+    tokio::time::timeout(
+        Duration::from_millis(timeout_ms.max(1)),
+        page.wait_for_navigation(),
+    )
+    .await
+    .map_err(|_| anyhow::anyhow!("timeout ({timeout_ms}ms) waiting for navigation"))?
+    .context("wait for navigation")?;
+    Ok(())
 }
 
 async fn wait_for_selector(
@@ -245,7 +290,7 @@ mod tests {
     #[test]
     fn browser_dom_actions_require_navigate_first() {
         let ctx = BrowserContext::new().expect("runtime");
-        let err = ctx.click("body", None).unwrap_err();
+        let err = ctx.click("body", None, false, None, None).unwrap_err();
         assert!(
             err.to_string().contains("browser_navigate"),
             "{err}"

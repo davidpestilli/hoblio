@@ -45,6 +45,19 @@ function producerFromAction(node: FlowNode, action: ActionKind): FlowVariablePro
         },
       ];
     }
+    case "file_read": {
+      const name = action.variable.trim();
+      if (!name) return [];
+      return [
+        {
+          name,
+          kind: "text",
+          nodeId: node.id,
+          nodeLabel: nodeTitle(node),
+          source: "FileRead",
+        },
+      ];
+    }
     default:
       return [];
   }
@@ -65,6 +78,18 @@ export function collectFlowVariableProducers(nodes: FlowNode[]): FlowVariablePro
           nodeId: node.id,
           nodeLabel: nodeTitle(node),
           source: "ForEach (item)",
+        });
+      }
+    }
+    if (node.control?.type === "repeat") {
+      const name = node.control.index_variable.trim();
+      if (name) {
+        out.push({
+          name,
+          kind: "loop_item",
+          nodeId: node.id,
+          nodeLabel: nodeTitle(node),
+          source: "Repeat (index)",
         });
       }
     }
@@ -98,12 +123,6 @@ function patchActionRename(
   switch (action.type) {
     case "log":
       return { ...action, message: replaceTemplateVars(action.message, oldName, newName) };
-    case "file_write":
-      return {
-        ...action,
-        path: replaceTemplateVars(action.path, oldName, newName),
-        content: replaceTemplateVars(action.content, oldName, newName),
-      };
     case "browser_fill":
       return { ...action, text: replaceTemplateVars(action.text, oldName, newName) };
     case "show_message":
@@ -118,10 +137,45 @@ function patchActionRename(
         variable: action.variable === oldName ? newName : action.variable,
         value: replaceTemplateVars(action.value, oldName, newName),
       };
+    case "increase_variable":
+    case "decrease_variable":
+      return {
+        ...action,
+        variable: action.variable === oldName ? newName : action.variable,
+        amount: action.amount
+          ? replaceTemplateVars(action.amount, oldName, newName)
+          : undefined,
+      };
     case "browser_get_text":
       return {
         ...action,
         variable: action.variable === oldName ? newName : action.variable,
+      };
+    case "file_read":
+      return {
+        ...action,
+        path: replaceTemplateVars(action.path, oldName, newName),
+        variable: action.variable === oldName ? newName : action.variable,
+      };
+    case "file_append":
+    case "file_write":
+      return {
+        ...action,
+        path: replaceTemplateVars(action.path, oldName, newName),
+        content: replaceTemplateVars(action.content, oldName, newName),
+      };
+    case "list_append":
+      return {
+        ...action,
+        list_variable:
+          action.list_variable === oldName ? newName : action.list_variable,
+        item: replaceTemplateVars(action.item, oldName, newName),
+      };
+    case "list_clear":
+      return {
+        ...action,
+        list_variable:
+          action.list_variable === oldName ? newName : action.list_variable,
       };
     default:
       return action;
@@ -142,13 +196,25 @@ export function renameVariableInFlowNodes(
         next = { ...next, action };
       }
     }
-    if (node.control?.type === "if") {
+    if (node.control?.type === "if" || node.control?.type === "while") {
       next = {
         ...next,
         control: {
           ...node.control,
           left: replaceTemplateVars(node.control.left, oldName, newName),
           right: replaceTemplateVars(node.control.right, oldName, newName),
+        },
+      };
+    }
+    if (node.control?.type === "repeat") {
+      const index_variable =
+        node.control.index_variable === oldName ? newName : node.control.index_variable;
+      next = {
+        ...next,
+        control: {
+          ...node.control,
+          times: replaceTemplateVars(node.control.times, oldName, newName),
+          index_variable,
         },
       };
     }

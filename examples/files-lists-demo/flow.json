@@ -1,0 +1,102 @@
+{
+  "start": "start",
+  "variables": {},
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "Start",
+      "ui": { "x": 40, "y": 200 }
+    },
+    {
+      "id": "clear_items",
+      "kind": "action",
+      "label": "Clear list",
+      "action": { "type": "list_clear", "list_variable": "items" },
+      "ui": { "x": 200, "y": 200 }
+    },
+    {
+      "id": "add_a",
+      "kind": "action",
+      "label": "Append alpha",
+      "action": { "type": "list_append", "list_variable": "items", "item": "alpha" },
+      "ui": { "x": 360, "y": 200 }
+    },
+    {
+      "id": "add_b",
+      "kind": "action",
+      "label": "Append beta",
+      "action": { "type": "list_append", "list_variable": "items", "item": "beta" },
+      "ui": { "x": 520, "y": 200 }
+    },
+    {
+      "id": "each_item",
+      "kind": "for_each",
+      "label": "For each item",
+      "control": {
+        "type": "for_each",
+        "list_variable": "items",
+        "item_variable": "item"
+      },
+      "ui": { "x": 720, "y": 200 }
+    },
+    {
+      "id": "append_line",
+      "kind": "action",
+      "label": "Append to report",
+      "action": {
+        "type": "file_append",
+        "path": "output/report.txt",
+        "content": "item={item}\n"
+      },
+      "ui": { "x": 920, "y": 200 }
+    },
+    {
+      "id": "write_header",
+      "kind": "action",
+      "label": "Write header",
+      "action": {
+        "type": "file_write",
+        "path": "output/report.txt",
+        "content": "report\n"
+      },
+      "ui": { "x": 200, "y": 360 }
+    },
+    {
+      "id": "read_back",
+      "kind": "action",
+      "label": "Read report",
+      "action": {
+        "type": "file_read",
+        "path": "output/report.txt",
+        "variable": "report_text"
+      },
+      "ui": { "x": 920, "y": 360 }
+    },
+    {
+      "id": "log_report",
+      "kind": "action",
+      "label": "Log report",
+      "action": { "type": "log", "message": "{report_text}" },
+      "ui": { "x": 1100, "y": 360 }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "End",
+      "ui": { "x": 1280, "y": 360 }
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "write_header" },
+    { "from": "write_header", "to": "clear_items" },
+    { "from": "clear_items", "to": "add_a" },
+    { "from": "add_a", "to": "add_b" },
+    { "from": "add_b", "to": "each_item" },
+    { "from": "each_item", "to": "append_line", "port": "body" },
+    { "from": "each_item", "to": "read_back", "port": "after" },
+    { "from": "append_line", "to": "each_item" },
+    { "from": "read_back", "to": "log_report" },
+    { "from": "log_report", "to": "end" }
+  ]
+}

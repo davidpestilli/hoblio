@@ -334,8 +334,17 @@ export default function App() {
           <button type="button" onClick={() => addAction("no_op")}>
             NoOp
           </button>
+          <button type="button" onClick={() => addAction("delay")}>
+            Delay
+          </button>
           <button type="button" onClick={() => addAction("file_write")}>
             FileWrite
+          </button>
+          <button type="button" onClick={() => addAction("file_append")}>
+            FileAppend
+          </button>
+          <button type="button" onClick={() => addAction("file_read")}>
+            FileRead
           </button>
           <button type="button" onClick={() => addAction("http_get")}>
             HttpGet
@@ -345,6 +354,9 @@ export default function App() {
           </button>
           <button type="button" onClick={() => addAction("browser_click")}>
             BrowserClick
+          </button>
+          <button type="button" onClick={() => addAction("browser_wait_navigation")}>
+            BrowserWaitNavigation
           </button>
           <button type="button" onClick={() => addAction("browser_fill")}>
             BrowserFill
@@ -363,6 +375,18 @@ export default function App() {
           <button type="button" onClick={() => addAction("set_variable")}>
             Set variable
           </button>
+          <button type="button" onClick={() => addAction("increase_variable")}>
+            Increase variable
+          </button>
+          <button type="button" onClick={() => addAction("decrease_variable")}>
+            Decrease variable
+          </button>
+          <button type="button" onClick={() => addAction("list_clear")}>
+            List clear
+          </button>
+          <button type="button" onClick={() => addAction("list_append")}>
+            List append
+          </button>
           <hr className="palette-divider" />
           <h4 className="palette-group">Condicionais</h4>
           <button type="button" onClick={() => editor.addControlNode("if")}>
@@ -371,6 +395,12 @@ export default function App() {
           <h4 className="palette-group">Loops</h4>
           <button type="button" onClick={() => editor.addControlNode("for_each")}>
             For each
+          </button>
+          <button type="button" onClick={() => editor.addControlNode("while_loop")}>
+            While
+          </button>
+          <button type="button" onClick={() => editor.addControlNode("repeat")}>
+            Repeat N times
           </button>
           <button type="button" onClick={() => editor.addControlNode("next_loop")}>
             Next loop

@@ -1,0 +1,94 @@
+{
+  "start": "start",
+  "variables": {
+    "counter": "0"
+  },
+  "nodes": [
+    {
+      "id": "start",
+      "kind": "start",
+      "label": "Start",
+      "ui": { "x": 40, "y": 200 }
+    },
+    {
+      "id": "while_counter",
+      "kind": "while_loop",
+      "label": "While counter < 4",
+      "control": {
+        "type": "while",
+        "left": "{counter}",
+        "operator": "lt",
+        "right": "4"
+      },
+      "ui": { "x": 220, "y": 200 }
+    },
+    {
+      "id": "log_iter",
+      "kind": "action",
+      "label": "Log iteration",
+      "action": {
+        "type": "log",
+        "message": "while body counter={counter}"
+      },
+      "ui": { "x": 440, "y": 200 }
+    },
+    {
+      "id": "inc",
+      "kind": "action",
+      "label": "Increase counter",
+      "action": {
+        "type": "increase_variable",
+        "variable": "counter"
+      },
+      "ui": { "x": 660, "y": 200 }
+    },
+    {
+      "id": "repeat_four",
+      "kind": "repeat",
+      "label": "Repeat 4 times",
+      "control": {
+        "type": "repeat",
+        "times": "4",
+        "index_variable": "LoopIndex"
+      },
+      "ui": { "x": 220, "y": 360 }
+    },
+    {
+      "id": "log_repeat",
+      "kind": "action",
+      "label": "Log repeat index",
+      "action": {
+        "type": "log",
+        "message": "repeat index={LoopIndex}"
+      },
+      "ui": { "x": 440, "y": 360 }
+    },
+    {
+      "id": "log_done",
+      "kind": "action",
+      "label": "After loops",
+      "action": {
+        "type": "log",
+        "message": "done counter={counter}"
+      },
+      "ui": { "x": 440, "y": 520 }
+    },
+    {
+      "id": "end",
+      "kind": "end",
+      "label": "End",
+      "ui": { "x": 660, "y": 520 }
+    }
+  ],
+  "edges": [
+    { "from": "start", "to": "while_counter" },
+    { "from": "while_counter", "to": "log_iter", "port": "body" },
+    { "from": "while_counter", "to": "repeat_four", "port": "after" },
+    { "from": "log_iter", "to": "inc" },
+    { "from": "inc", "to": "while_counter" },
+    { "from": "repeat_four", "to": "log_repeat", "port": "body" },
+    { "from": "repeat_four", "to": "log_done", "port": "after" },
+    { "from": "log_repeat", "to": "repeat_four" },
+    { "from": "log_done", "to": "end" }
+  ]
+}

@@ -6,7 +6,14 @@ import {
   scalarNamesForPicker,
   validateProducerName,
 } from "./flowVariables";
-import type { CompareOperator, ControlKind, FlowNode, ActionKind } from "./model";
+import type {
+  CompareOperator,
+  ControlKind,
+  ErrorHandling,
+  FlowNode,
+  ActionKind,
+  OnFailure,
+} from "./model";
 import { actionLabel, defaultAction, patchBrowserDomAction } from "./model";
 import { ProjectVariablesPanel } from "./ProjectVariablesPanel";
 import { listVariableNames } from "./projectVariables";
@@ -106,6 +113,34 @@ export function PropertiesPanel({
     draftChange({ ...node, control: { ...node.control, ...patch, type: "for_each" } });
   };
 
+  const patchWhile = (patch: Partial<Extract<ControlKind, { type: "while" }>>) => {
+    if (readOnly || node.control?.type !== "while") return;
+    draftChange({ ...node, control: { ...node.control, ...patch, type: "while" } });
+  };
+
+  const patchRepeat = (patch: Partial<Extract<ControlKind, { type: "repeat" }>>) => {
+    if (readOnly || node.control?.type !== "repeat") return;
+    draftChange({ ...node, control: { ...node.control, ...patch, type: "repeat" } });
+  };
+
+  const patchErrorHandling = (patch: Partial<ErrorHandling>) => {
+    if (readOnly || node.kind !== "action") return;
+    const current = node.error_handling ?? {};
+    draftChange({ ...node, error_handling: { ...current, ...patch } });
+  };
+
+  const compareOperatorOptions = (
+    <>
+      <option value="eq">Equal</option>
+      <option value="ne">Not equal</option>
+      <option value="contains">Contains</option>
+      <option value="gt">&gt;</option>
+      <option value="gte">&gt;=</option>
+      <option value="lt">&lt;</option>
+      <option value="lte">&lt;=</option>
+    </>
+  );
+
   return (
     <div className="panel properties">
       <h3>Properties</h3>
@@ -160,9 +195,7 @@ export function PropertiesPanel({
                 commitDraft();
               }}
             >
-              <option value="eq">Equal</option>
-              <option value="ne">Not equal</option>
-              <option value="contains">Contains</option>
+              {compareOperatorOptions}
             </select>
           </label>
           <label>
@@ -185,9 +218,80 @@ export function PropertiesPanel({
                 commitDraft();
               }}
             />
-            Ignore case
+            Ignore case (text operators only)
           </label>
           <p className="hint">Connect saída then (→) e else (↓).</p>
+        </>
+      )}
+
+      {node.kind === "while_loop" && node.control?.type === "while" && (
+        <>
+          <datalist id="hoblio-scalar-vars-while">
+            {scalarVars.map((name) => (
+              <option key={name} value={`{${name}}`} />
+            ))}
+          </datalist>
+          <label>
+            Left
+            <input
+              value={node.control.left}
+              disabled={readOnly}
+              list="hoblio-scalar-vars-while"
+              onChange={(e) => patchWhile({ left: e.target.value })}
+              onBlur={commitDraft}
+            />
+          </label>
+          <label>
+            Operator
+            <select
+              value={node.control.operator}
+              disabled={readOnly}
+              onChange={(e) => {
+                patchWhile({ operator: e.target.value as CompareOperator });
+                commitDraft();
+              }}
+            >
+              {compareOperatorOptions}
+            </select>
+          </label>
+          <label>
+            Right
+            <input
+              value={node.control.right}
+              disabled={readOnly}
+              list="hoblio-scalar-vars-while"
+              onChange={(e) => patchWhile({ right: e.target.value })}
+              onBlur={commitDraft}
+            />
+          </label>
+          <p className="hint">
+            Re-evaluates each time the body returns. Body (→) must connect back to While; after (↓)
+            when the condition is false.
+          </p>
+        </>
+      )}
+
+      {node.kind === "repeat" && node.control?.type === "repeat" && (
+        <>
+          <label>
+            Times
+            <input
+              value={node.control.times}
+              disabled={readOnly}
+              onChange={(e) => patchRepeat({ times: e.target.value })}
+              onBlur={commitDraft}
+            />
+          </label>
+          <label>
+            Index variable (0-based)
+            <input
+              value={node.control.index_variable}
+              disabled={readOnly}
+              onChange={(e) => patchRepeat({ index_variable: e.target.value })}
+              onBlur={commitDraft}
+            />
+          </label>
+          <p className="hint">Body (→) returns to Repeat; after (↓) when all iterations finish.</p>
         </>
       )}
 
@@ -243,7 +347,9 @@ export function PropertiesPanel({
       )}
 
       {(node.kind === "next_loop" || node.kind === "exit_loop") && (
-        <p className="hint">Coloque dentro do corpo do For each; uma saída main.</p>
+        <p className="hint">
+          Coloque dentro do corpo de For each, While ou Repeat; uma saída main.
+        </p>
       )}
 
       {node.kind === "action" && node.action && (
@@ -258,13 +364,21 @@ export function PropertiesPanel({
               <option value="log">Log</option>
               <option value="no_op">NoOp</option>
               <option value="file_write">FileWrite</option>
+              <option value="file_append">FileAppend</option>
+              <option value="file_read">FileRead</option>
+              <option value="list_append">ListAppend</option>
+              <option value="list_clear">ListClear</option>
               <option value="http_get">HttpGet</option>
               <option value="browser_navigate">BrowserNavigate</option>
               <option value="browser_click">BrowserClick</option>
+              <option value="browser_wait_navigation">BrowserWaitNavigation</option>
               <option value="browser_fill">BrowserFill</option>
               <option value="browser_wait_for">BrowserWaitFor</option>
+              <option value="delay">Delay</option>
               <option value="browser_get_text">BrowserGetText</option>
               <option value="set_variable">SetVariable</option>
+              <option value="increase_variable">IncreaseVariable</option>
+              <option value="decrease_variable">DecreaseVariable</option>
               <option value="show_message">ShowMessage</option>
             </select>
           </label>
@@ -287,17 +401,20 @@ export function PropertiesPanel({
             </label>
           )}
 
-          {node.action.type === "file_write" && (
+          {(node.action.type === "file_write" || node.action.type === "file_append") && (
             <>
               <label>
-                Path
+                Path (relative to project folder)
                 <input
                   value={node.action.path}
                   onChange={(e) =>
                     patchActionDraft({
-                      type: "file_write",
+                      type: node.action!.type,
                       path: e.target.value,
-                      content: node.action!.type === "file_write" ? node.action.content : "",
+                      content:
+                        node.action!.type === "file_write" || node.action!.type === "file_append"
+                          ? node.action!.content
+                          : "",
                     })
                   }
                   onBlur={commitDraft}
@@ -310,14 +427,113 @@ export function PropertiesPanel({
                   value={node.action.content}
                   onChange={(e) =>
                     patchActionDraft({
-                      type: "file_write",
+                      type: node.action!.type,
                       content: e.target.value,
-                      path: node.action!.type === "file_write" ? node.action.path : "",
+                      path:
+                        node.action!.type === "file_write" || node.action!.type === "file_append"
+                          ? node.action!.path
+                          : "",
                     })
                   }
                   onBlur={commitDraft}
                 />
               </label>
+              {node.action.type === "file_append" ? (
+                <p className="hint">Appends without overwriting the existing file.</p>
+              ) : null}
+            </>
+          )}
+
+          {node.action.type === "file_read" && (
+            <>
+              <label>
+                Path
+                <input
+                  value={node.action.path}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      type: "file_read",
+                      path: e.target.value,
+                      variable:
+                        node.action!.type === "file_read" ? node.action!.variable : "FileContent1",
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+              </label>
+              <label>
+                Output variable
+                <input
+                  value={node.action.variable}
+                  onFocus={() => {
+                    outputNameBeforeEdit.current =
+                      node.action?.type === "file_read" ? node.action.variable : "";
+                  }}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      type: "file_read",
+                      path: node.action!.type === "file_read" ? node.action!.path : "",
+                      variable: e.target.value,
+                    })
+                  }
+                  onBlur={(e) => {
+                    commitOutputVariableRename(outputNameBeforeEdit.current, e.target.value.trim());
+                    commitDraft();
+                  }}
+                  disabled={readOnly}
+                />
+              </label>
+            </>
+          )}
+
+          {node.action.type === "list_clear" && (
+            <label>
+              List variable
+              <input
+                value={node.action.list_variable}
+                disabled={readOnly}
+                onChange={(e) =>
+                  patchActionDraft({ type: "list_clear", list_variable: e.target.value })
+                }
+                onBlur={commitDraft}
+              />
+            </label>
+          )}
+
+          {node.action.type === "list_append" && (
+            <>
+              <label>
+                List variable
+                <input
+                  value={node.action.list_variable}
+                  disabled={readOnly}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      type: "list_append",
+                      list_variable: e.target.value,
+                      item: node.action!.type === "list_append" ? node.action!.item : "",
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+              </label>
+              <label>
+                Item
+                <input
+                  value={node.action.item}
+                  disabled={readOnly}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      type: "list_append",
+                      list_variable:
+                        node.action!.type === "list_append" ? node.action!.list_variable : "items",
+                      item: e.target.value,
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+              </label>
+              <p className="hint">Creates the list at `[]` on first append. For each can iterate it later in the same run.</p>
             </>
           )}
 
@@ -426,6 +642,42 @@ export function PropertiesPanel({
             </>
           )}
 
+          {node.action.type === "browser_wait_navigation" && (
+            <label>
+              Timeout (ms)
+              <input
+                type="number"
+                value={node.action.timeout_ms ?? ""}
+                onChange={(e) =>
+                  patchActionDraft({
+                    type: "browser_wait_navigation",
+                    timeout_ms: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+                onBlur={commitDraft}
+              />
+            </label>
+          )}
+
+          {node.action.type === "delay" && (
+            <label>
+              Milliseconds
+              <input
+                type="number"
+                min={0}
+                value={node.action.milliseconds}
+                disabled={readOnly}
+                onChange={(e) =>
+                  patchActionDraft({
+                    type: "delay",
+                    milliseconds: Number(e.target.value) || 0,
+                  })
+                }
+                onBlur={commitDraft}
+              />
+            </label>
+          )}
+
           {(node.action.type === "browser_click" ||
             node.action.type === "browser_fill" ||
             node.action.type === "browser_wait_for" ||
@@ -462,6 +714,75 @@ export function PropertiesPanel({
                   onBlur={commitDraft}
                 />
               </label>
+              {node.action.type === "browser_click" ? (
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={node.action.wait_for_navigation ?? false}
+                    disabled={readOnly}
+                    onChange={(e) =>
+                      draftChange({
+                        ...node,
+                        action: patchBrowserDomAction(
+                          node.action!,
+                          { wait_for_navigation: e.target.checked },
+                          "browser_click",
+                        ),
+                      })
+                    }
+                    onBlur={commitDraft}
+                  />
+                  Wait for navigation after click
+                </label>
+              ) : null}
+              {node.action.type === "browser_click" ? (
+                <>
+                  <label>
+                    Wait selector after click (optional)
+                    <input
+                      value={node.action.wait_selector_after ?? ""}
+                      disabled={readOnly}
+                      placeholder="e.g. body h1"
+                      onChange={(e) =>
+                        draftChange({
+                          ...node,
+                          action: patchBrowserDomAction(
+                            node.action!,
+                            {
+                              wait_selector_after: e.target.value || undefined,
+                            },
+                            "browser_click",
+                          ),
+                        })
+                      }
+                      onBlur={commitDraft}
+                    />
+                  </label>
+                  <label>
+                    Wait after timeout (ms)
+                    <input
+                      type="number"
+                      value={node.action.wait_after_timeout_ms ?? ""}
+                      disabled={readOnly}
+                      onChange={(e) =>
+                        draftChange({
+                          ...node,
+                          action: patchBrowserDomAction(
+                            node.action!,
+                            {
+                              wait_after_timeout_ms: e.target.value
+                                ? Number(e.target.value)
+                                : undefined,
+                            },
+                            "browser_click",
+                          ),
+                        })
+                      }
+                      onBlur={commitDraft}
+                    />
+                  </label>
+                </>
+              ) : null}
             </>
           )}
 
@@ -522,6 +843,51 @@ export function PropertiesPanel({
             </label>
           )}
 
+          {(node.action.type === "increase_variable" ||
+            node.action.type === "decrease_variable") && (
+            <>
+              <label>
+                Variable
+                <input
+                  value={node.action.variable}
+                  disabled={readOnly}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      type: node.action!.type,
+                      variable: e.target.value,
+                      amount:
+                        node.action!.type === "increase_variable" ||
+                        node.action!.type === "decrease_variable"
+                          ? node.action!.amount
+                          : undefined,
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+              </label>
+              <label>
+                Amount (optional, default 1)
+                <input
+                  value={node.action.amount ?? ""}
+                  disabled={readOnly}
+                  placeholder="1"
+                  onChange={(e) =>
+                    patchActionDraft({
+                      type: node.action!.type,
+                      variable:
+                        node.action!.type === "increase_variable" ||
+                        node.action!.type === "decrease_variable"
+                          ? node.action!.variable
+                          : "counter",
+                      amount: e.target.value || undefined,
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+              </label>
+            </>
+          )}
+
           {node.action.type === "set_variable" && (
             <>
               <label>
@@ -578,6 +944,49 @@ export function PropertiesPanel({
               </label>
             </>
           )}
+
+          <hr className="palette-divider" />
+          <h4 className="palette-group">On error</h4>
+          <label>
+            Retry count (extra attempts)
+            <input
+              type="number"
+              min={0}
+              value={node.error_handling?.retry_count ?? 0}
+              disabled={readOnly}
+              onChange={(e) =>
+                patchErrorHandling({ retry_count: Math.max(0, Number(e.target.value) || 0) })
+              }
+              onBlur={commitDraft}
+            />
+          </label>
+          <label>
+            Retry delay (ms)
+            <input
+              type="number"
+              min={0}
+              value={node.error_handling?.retry_delay_ms ?? 500}
+              disabled={readOnly}
+              onChange={(e) =>
+                patchErrorHandling({ retry_delay_ms: Number(e.target.value) || 0 })
+              }
+              onBlur={commitDraft}
+            />
+          </label>
+          <label>
+            If still failing
+            <select
+              value={node.error_handling?.on_failure ?? "stop"}
+              disabled={readOnly}
+              onChange={(e) => {
+                patchErrorHandling({ on_failure: e.target.value as OnFailure });
+                commitDraft();
+              }}
+            >
+              <option value="stop">Stop flow</option>
+              <option value="continue">Continue to next step</option>
+            </select>
+          </label>
         </>
       )}
     </div>

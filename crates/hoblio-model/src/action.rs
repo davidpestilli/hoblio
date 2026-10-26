@@ -18,6 +18,19 @@ pub enum ActionKind {
         selector: String,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_ms: Option<u64>,
+        /// When true, wait for a navigation after the click (same timeout as element wait).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_for_navigation: Option<bool>,
+        /// After click (and optional navigation wait), wait until this selector exists.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_selector_after: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wait_after_timeout_ms: Option<u64>,
+    },
+    /// Wait until the page finishes a navigation (e.g. after a link click).
+    BrowserWaitNavigation {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u64>,
     },
     /// Clear then type into an input-like element.
     BrowserFill {
@@ -41,8 +54,24 @@ pub enum ActionKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         variable: Option<String>,
     },
-    /// Placeholder — write text to a file (MVP).
+    /// Write text to a file (overwrites); path relative to project folder when relative.
     FileWrite { path: String, content: String },
+    /// Append text to a file (creates file if missing).
+    FileAppend { path: String, content: String },
+    /// Read entire file as UTF-8 into a run variable.
+    FileRead {
+        path: String,
+        variable: String,
+    },
+    /// Append one item to a JSON string list run variable (creates empty list if missing).
+    ListAppend {
+        list_variable: String,
+        item: String,
+    },
+    /// Reset a list run variable to `[]`.
+    ListClear { list_variable: String },
+    /// Pause the flow for a fixed duration.
+    Delay { milliseconds: u64 },
     /// Placeholder — HTTP GET (MVP).
     HttpGet { url: String },
     /// Simple native message window (Windows; non-blocking).
@@ -59,6 +88,18 @@ pub enum ActionKind {
         /// Supports `{other}` interpolation from existing run variables.
         value: String,
     },
+    /// Add to a numeric run variable (default amount 1).
+    IncreaseVariable {
+        variable: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        amount: Option<String>,
+    },
+    /// Subtract from a numeric run variable (default amount 1).
+    DecreaseVariable {
+        variable: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        amount: Option<String>,
+    },
 }
 
 impl ActionKind {
@@ -71,6 +112,9 @@ impl ActionKind {
                 .into_iter()
                 .collect(),
             ActionKind::SetVariable { variable, .. } if !variable.is_empty() => {
+                vec![variable.as_str()]
+            }
+            ActionKind::FileRead { variable, .. } if !variable.is_empty() => {
                 vec![variable.as_str()]
             }
             _ => vec![],
@@ -93,6 +137,12 @@ mod tests {
             ActionKind::BrowserClick {
                 selector: "#go".into(),
                 timeout_ms: Some(5000),
+                wait_for_navigation: Some(true),
+                wait_selector_after: None,
+                wait_after_timeout_ms: None,
+            },
+            ActionKind::BrowserWaitNavigation {
+                timeout_ms: Some(8000),
             },
             ActionKind::BrowserFill {
                 selector: "input[name=q]".into(),
@@ -159,4 +209,8 @@ pub enum NodeKind {
     NextLoop,
     /// Leave innermost ForEach via its `after` port (PAD Exit loop).
     ExitLoop,
+    /// Loop while `control.condition` is true (PAD Loop while).
+    WhileLoop,
+    /// Loop body a fixed number of times (PAD Loop N times).
+    Repeat,
 }

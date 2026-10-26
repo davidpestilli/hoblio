@@ -94,7 +94,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\eval-flow-control.ps
 |------|-----------|
 | `log` | Mensagem no log (suporta `{variavel}`) |
 | `no_op` | Nada |
-| `file_write` | Caminho **relativo à pasta do projeto** + conteúdo |
+| `file_write` / `file_append` / `file_read` | Escrever, acrescentar ou ler UTF-8 → variável |
+| `list_append` / `list_clear` | Lista JSON em variável de run (For each) |
+| `delay` | Pausa fixa (ms) |
+| `set_variable` / `increase_variable` / `decrease_variable` | Variáveis de run |
 | `http_get` | URL |
 | `show_message` | Janela nativa (Windows) |
 | `browser_*` | Navegação e DOM via Chrome/Edge (CDP) |
@@ -113,8 +116,12 @@ Ordem típica: **`browser_navigate`** primeiro; depois passos DOM na **mesma exe
 |------|-----|
 | `browser_navigate` | Abrir URL |
 | `browser_wait_for` | Esperar seletor CSS |
-| `browser_click` / `browser_fill` | Interagir com página |
+| `browser_click` | Clique; opcional `wait_for_navigation`, `wait_selector_after` |
+| `browser_wait_navigation` | Esperar navegação da aba |
+| `browser_fill` | Digitar em campo |
 | `browser_get_text` | Ler texto → variável (`variable`) |
+
+Nós de ação podem ter **`error_handling`**: `retry_count`, `retry_delay_ms`, `on_failure` (`stop` \| `continue`). Ver [slice 8](fase-mvp-slice8-browser-resilience.md).
 
 **Variáveis:** objeto `variables` no `flow.json` ou painel do Studio; `{nome}` em `log` e `file_write`.
 
@@ -135,7 +142,7 @@ Detalhes: [guia de construção §9](guia-construcao.md) · [slice 5](fase-mvp-s
 
 ## 6. O que ainda não está pronto
 
-- **Switch**, loops `while` genéricos, subfluxos aninhados
+- **Switch**, subfluxos aninhados, ramo **On error** dedicado no grafo
 - **Excel**, **e-mail**, HTTP com proxy/OAuth
 - UIA Windows além do pacote browser
 - Importar fluxos Power Automate Desktop

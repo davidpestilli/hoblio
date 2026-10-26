@@ -6,7 +6,7 @@ use crate::action::{ActionKind, NodeKind};
 use crate::control::EdgePort;
 use crate::control::ControlKind;
 use crate::flow::{FlowGraph, NodeId};
-use crate::project::{FlowProject, ProjectVariables};
+use crate::project::FlowProject;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ValidationError {
@@ -40,18 +40,20 @@ pub enum ValidationError {
     MissingOutgoingPort(NodeId, String),
     #[error("node `{0}` must not use port `{1}`")]
     InvalidPortForNode(NodeId, String),
-    #[error("cycle detected without a for_each node (nodes: {0})")]
+    #[error("cycle detected without a loop node (for_each / while_loop / repeat) (nodes: {0})")]
     CycleWithoutForEach(String),
-    #[error("node `{0}` must be inside the body of a for_each loop")]
+    #[error("node `{0}` must be inside the body of a loop (for_each, while_loop, or repeat)")]
     LoopControlOutsideForEach(NodeId),
-    #[error("for_each node `{0}` references unknown list variable `{1}`")]
-    UnknownListVariable(NodeId, String),
+    #[error("for_each node `{0}` has invalid list variable name `{1}`")]
+    InvalidListVariable(NodeId, String),
     #[error("node `{0}` uses invalid variable name `{1}`")]
     InvalidVariableName(NodeId, String),
     #[error("variable `{0}` is produced by both `{1}` and `{2}`")]
     DuplicateVariableProducer(String, NodeId, NodeId),
     #[error("node `{0}` set_variable requires a non-empty variable name")]
     SetVariableNameMissing(NodeId),
+    #[error("node `{0}` retry_count {1} exceeds maximum allowed")]
+    InvalidRetryCount(NodeId, u32),
 }
 
 pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
@@ -83,7 +85,12 @@ pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
             NodeKind::Action if node.action.is_none() => {
                 return Err(ValidationError::ActionNodeMissingAction(node.id.clone()));
             }
-            NodeKind::If | NodeKind::ForEach if node.control.is_none() => {
+            NodeKind::If
+            | NodeKind::ForEach
+            | NodeKind::WhileLoop
+            | NodeKind::Repeat
+                if node.control.is_none() =>
+            {
                 return Err(ValidationError::ControlNodeMissingControl(node.id.clone()));
             }
             NodeKind::NextLoop | NodeKind::ExitLoop => {}
@@ -93,7 +100,10 @@ pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
             return Err(ValidationError::NonActionHasAction(node.id.clone()));
         }
         if node.control.is_some()
-            && !matches!(node.kind, NodeKind::If | NodeKind::ForEach)
+            && !matches!(
+                node.kind,
+                NodeKind::If | NodeKind::ForEach | NodeKind::WhileLoop | NodeKind::Repeat
+            )
         {
             return Err(ValidationError::NonControlHasControl(node.id.clone()));
         }
@@ -161,9 +171,27 @@ pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
 
 pub fn validate_project(project: &FlowProject) -> Result<(), ValidationError> {
     validate_graph(&project.flow)?;
-    validate_for_each_list_variables(&project.flow, &project.variables)?;
+    validate_for_each_list_names(&project.flow)?;
     validate_loop_controls(&project.flow)?;
     validate_variable_producers(&project.flow)?;
+    validate_error_handling(&project.flow)?;
+    Ok(())
+}
+
+const MAX_ACTION_RETRIES: u32 = 50;
+
+fn validate_error_handling(graph: &FlowGraph) -> Result<(), ValidationError> {
+    for node in &graph.nodes {
+        let Some(policy) = &node.error_handling else {
+            continue;
+        };
+        if policy.retry_count > MAX_ACTION_RETRIES {
+            return Err(ValidationError::InvalidRetryCount(
+                node.id.clone(),
+                policy.retry_count,
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -184,6 +212,21 @@ fn validate_variable_producers(graph: &FlowGraph) -> Result<(), ValidationError>
             if matches!(action, ActionKind::SetVariable { variable, .. } if variable.trim().is_empty())
             {
                 return Err(ValidationError::SetVariableNameMissing(node.id.clone()));
+            }
+            if matches!(action, ActionKind::FileRead { variable, .. } if variable.trim().is_empty())
+            {
+                return Err(ValidationError::SetVariableNameMissing(node.id.clone()));
+            }
+            if matches!(
+                action,
+                ActionKind::ListAppend { list_variable, .. }
+                    | ActionKind::ListClear { list_variable }
+                    if list_variable.trim().is_empty()
+            ) {
+                return Err(ValidationError::InvalidListVariable(
+                    node.id.clone(),
+                    String::new(),
+                ));
             }
             for name in action.produced_variables() {
                 if !is_valid_variable_name(name) {
@@ -223,15 +266,32 @@ fn validate_variable_producers(graph: &FlowGraph) -> Result<(), ValidationError>
             }
             producers.insert(name.to_string(), node.id.clone());
         }
+        if node.kind == NodeKind::Repeat {
+            let Some(ControlKind::Repeat(cfg)) = &node.control else {
+                continue;
+            };
+            let name = cfg.index_variable.trim();
+            if name.is_empty() || !is_valid_variable_name(name) {
+                return Err(ValidationError::InvalidVariableName(
+                    node.id.clone(),
+                    cfg.index_variable.clone(),
+                ));
+            }
+            if let Some(prev) = producers.get(name) {
+                return Err(ValidationError::DuplicateVariableProducer(
+                    name.to_string(),
+                    prev.clone(),
+                    node.id.clone(),
+                ));
+            }
+            producers.insert(name.to_string(), node.id.clone());
+        }
     }
 
     Ok(())
 }
 
-fn validate_for_each_list_variables(
-    graph: &FlowGraph,
-    variables: &ProjectVariables,
-) -> Result<(), ValidationError> {
+fn validate_for_each_list_names(graph: &FlowGraph) -> Result<(), ValidationError> {
     for node in &graph.nodes {
         if node.kind != NodeKind::ForEach {
             continue;
@@ -239,8 +299,9 @@ fn validate_for_each_list_variables(
         let Some(ControlKind::ForEach(cfg)) = &node.control else {
             continue;
         };
-        if !variables.contains_key(&cfg.list_variable) {
-            return Err(ValidationError::UnknownListVariable(
+        let name = cfg.list_variable.trim();
+        if name.is_empty() || !is_valid_variable_name(name) {
+            return Err(ValidationError::InvalidListVariable(
                 node.id.clone(),
                 cfg.list_variable.clone(),
             ));
@@ -260,8 +321,11 @@ fn validate_loop_controls(graph: &FlowGraph) -> Result<(), ValidationError> {
 
     let mut body_union = HashSet::new();
     for node in &graph.nodes {
-        if node.kind == NodeKind::ForEach {
-            body_union.extend(for_each_body_nodes(&node.id, &outgoing));
+        if matches!(
+            node.kind,
+            NodeKind::ForEach | NodeKind::WhileLoop | NodeKind::Repeat
+        ) {
+            body_union.extend(loop_body_nodes(&node.id, &outgoing));
         }
     }
 
@@ -275,11 +339,11 @@ fn validate_loop_controls(graph: &FlowGraph) -> Result<(), ValidationError> {
     Ok(())
 }
 
-fn for_each_body_nodes(
-    for_each_id: &str,
+fn loop_body_nodes(
+    loop_id: &str,
     outgoing: &HashMap<String, Vec<(EdgePort, String)>>,
 ) -> HashSet<String> {
-    let Some(body_start) = outgoing.get(for_each_id).and_then(|edges| {
+    let Some(body_start) = outgoing.get(loop_id).and_then(|edges| {
         edges
             .iter()
             .find(|(port, _)| *port == EdgePort::Body)
@@ -294,14 +358,14 @@ fn for_each_body_nodes(
         if !seen.insert(id.clone()) {
             continue;
         }
-        if id == for_each_id {
+        if id == loop_id {
             continue;
         }
         let Some(edges) = outgoing.get(&id) else {
             continue;
         };
         for (port, to) in edges {
-            if id == for_each_id && *port == EdgePort::After {
+            if id == loop_id && *port == EdgePort::After {
                 continue;
             }
             stack.push(to.clone());
@@ -322,7 +386,7 @@ fn cycle_without_for_each(
             .push(edge.to.clone());
         if edge.from == edge.to {
             let node = by_id.get(&edge.from).copied()?;
-            if node.kind != NodeKind::ForEach {
+            if !is_loop_header(node.kind) {
                 return Some(edge.from.clone());
             }
         }
@@ -405,17 +469,24 @@ fn cycle_without_for_each(
         if component.len() <= 1 {
             continue;
         }
-        let has_for_each = component.iter().any(|id| {
+        let has_loop = component.iter().any(|id| {
             by_id
                 .get(id)
-                .map(|n| n.kind == NodeKind::ForEach)
+                .map(|n| is_loop_header(n.kind))
                 .unwrap_or(false)
         });
-        if !has_for_each {
+        if !has_loop {
             return Some(component.join(", "));
         }
     }
     None
+}
+
+fn is_loop_header(kind: NodeKind) -> bool {
+    matches!(
+        kind,
+        NodeKind::ForEach | NodeKind::WhileLoop | NodeKind::Repeat
+    )
 }
 
 fn port_allowed(kind: NodeKind, port: EdgePort) -> bool {
@@ -425,7 +496,9 @@ fn port_allowed(kind: NodeKind, port: EdgePort) -> bool {
         }
         NodeKind::End => false,
         NodeKind::If => matches!(port, EdgePort::Then | EdgePort::Else),
-        NodeKind::ForEach => matches!(port, EdgePort::Body | EdgePort::After),
+        NodeKind::ForEach | NodeKind::WhileLoop | NodeKind::Repeat => {
+            matches!(port, EdgePort::Body | EdgePort::After)
+        }
     }
 }
 
@@ -438,7 +511,9 @@ fn validate_required_ports(
         .unwrap_or_default();
     let need = match node.kind {
         NodeKind::If => [EdgePort::Then, EdgePort::Else],
-        NodeKind::ForEach => [EdgePort::Body, EdgePort::After],
+        NodeKind::ForEach | NodeKind::WhileLoop | NodeKind::Repeat => {
+            [EdgePort::Body, EdgePort::After]
+        }
         _ => return None,
     };
     for port in need {
@@ -484,6 +559,7 @@ mod tests {
                     action: None,
                     control: None,
                     ui: None,
+                    error_handling: None,
                 },
                 Node {
                     id: "log1".into(),
@@ -494,6 +570,7 @@ mod tests {
                     })),
                     control: None,
                     ui: None,
+                    error_handling: None,
                 },
                 Node {
                     id: "end".into(),
@@ -502,6 +579,7 @@ mod tests {
                     action: None,
                     control: None,
                     ui: None,
+                    error_handling: None,
                 },
             ],
             edges: vec![
@@ -547,6 +625,7 @@ mod tests {
                     ignore_case: false,
                 })),
                 ui: None,
+                error_handling: None,
             },
         );
         g.edges = vec![
