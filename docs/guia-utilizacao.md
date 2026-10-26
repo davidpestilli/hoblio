@@ -34,7 +34,7 @@ npm run tauri dev
    - **Tracado:** aresta selecionada → **+** no segmento; waypoints.
    - **Desfazer / Refazer** (toolbar ou **Ctrl+Z** / **Ctrl+Shift+Z**).
 3. **Painel Properties** (direita): parâmetros do nó selecionado; **Delete node** no modo Edição.
-4. **Sem nó selecionado:** editor **Project variables** (JSON) — listas para ForEach, `flag` para If, etc.
+4. **Sem nó selecionado:** **Project variables** — seções **Variables** e **Lists** (ou **Advanced JSON**); listas para For each, escalares (ex. `flag`) para If.
 5. **Validate** — `validate_project` (grafo + variáveis); erros em vermelho na barra.
 6. **Save** (**Ctrl+S**) — grava `flow.json` e `manifest.json`.
 7. **Run** / **Stop** — executa ou pede cancelamento; cancelamento mostra **Run cancelled** (não erro).
@@ -150,7 +150,7 @@ Roadmap: [decisoes-produto.md](decisoes-produto.md).
 | `setup-dev` para no início (disco C:) | Liberar ~4–7 GB no C:; [troubleshooting Windows](troubleshooting-windows.md) |
 | `cargo` não encontrado | rustup; reiniciar terminal |
 | Erro de linker / `link.exe` | VS Build Tools 2022 + carga C++ |
-| Validate falha em ForEach | Confira `variables` (lista JSON) e nomes `list_variable` / `item_variable` |
+| Validate falha em ForEach | Confira **Lists** em Project variables (ou `variables` no JSON) e o **List variable** no nó For each |
 | FileWrite no lugar errado | Caminho relativo à **pasta do projeto** (`output/...`), não `examples/.../examples/...` |
 | Browser falha | `HOBLIO_CHROME_PATH` |
 | Run trava em loop | **Stop** ou limite 10k passos; corrija o grafo |

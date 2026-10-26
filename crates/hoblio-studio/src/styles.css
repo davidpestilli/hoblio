@@ -126,6 +126,144 @@ body,
   margin: 0;
 }
 
+.project-variables .var-section {
+  margin-bottom: 1rem;
+}
+
+.project-variables .var-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.project-variables .var-section-head h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.project-variables .var-section-head button {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+}
+
+.project-variables .var-empty {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0 0 0.25rem;
+}
+
+.project-variables .var-scalar-list,
+.project-variables .var-list-blocks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.project-variables .var-scalar-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1.2fr auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.project-variables .var-name {
+  min-width: 0;
+}
+
+.project-variables .var-value {
+  min-width: 0;
+}
+
+.project-variables .var-bool-value {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.project-variables .var-remove {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.25rem;
+}
+
+.project-variables .var-remove:hover:not(:disabled) {
+  color: #b91c1c;
+}
+
+.project-variables .var-field-error {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: #b91c1c;
+}
+
+.project-variables .var-list-block {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.45rem;
+}
+
+.project-variables .var-list-head {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.project-variables .var-list-head .var-name {
+  flex: 1;
+}
+
+.project-variables .var-list-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.project-variables .var-list-item-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.project-variables .var-list-item-row input {
+  flex: 1;
+}
+
+.project-variables .var-add-item {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+}
+
+.project-variables .var-other-hint {
+  margin-top: 0;
+}
+
+.project-variables .var-advanced {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.project-variables .var-advanced summary {
+  cursor: pointer;
+  color: #4b5563;
+  margin-bottom: 0.35rem;
+}
+
 .properties .props-delete {
   width: 100%;
   margin-bottom: 0.75rem;

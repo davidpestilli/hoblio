@@ -22,14 +22,6 @@ function formatError(e: unknown): string {
   return String(e);
 }
 
-function variablesToJson(variables: Record<string, unknown>): string {
-  try {
-    return JSON.stringify(variables, null, 2);
-  } catch {
-    return "{}";
-  }
-}
-
 function projectDigest(project: FlowProject): string {
   return JSON.stringify({
     manifest: project.manifest,
@@ -43,22 +35,6 @@ function isRunCancelledMessage(message: string): boolean {
   return lower.includes("cancelled by user") || lower.includes("run cancelled");
 }
 
-function parseVariablesJson(text: string): { ok: true; value: Record<string, unknown> } | { ok: false; error: string } {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return { ok: true, value: {} };
-  }
-  try {
-    const parsed: unknown = JSON.parse(trimmed);
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { ok: false, error: "Variables must be a JSON object." };
-    }
-    return { ok: true, value: parsed as Record<string, unknown> };
-  } catch {
-    return { ok: false, error: "Invalid JSON." };
-  }
-}
-
 export default function App() {
   const [project, setProject] = useState<FlowProject>(() => defaultProject());
   const [projectDir, setProjectDir] = useState<string | null>(null);
@@ -69,8 +45,9 @@ export default function App() {
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [variablesJson, setVariablesJson] = useState(() => variablesToJson(project.variables));
-  const [variablesError, setVariablesError] = useState<string | null>(null);
+  const [variables, setVariables] = useState<Record<string, unknown>>(
+    () => defaultProject().variables,
+  );
 
   const saveProjectRef = useRef<() => void>(() => {});
   const savedDigestRef = useRef(projectDigest(defaultProject()));
@@ -82,16 +59,12 @@ export default function App() {
   });
 
   const syncProjectFromCanvas = useCallback((): FlowProject => {
-    const parsed = parseVariablesJson(variablesJson);
-    if (!parsed.ok) {
-      throw new Error(parsed.error);
-    }
     return {
       ...project,
       flow: editor.toFlowGraph(),
-      variables: parsed.value,
+      variables,
     };
-  }, [editor, project, variablesJson]);
+  }, [editor, project, variables]);
 
   const setOkStatus = (message: string) => {
     setStatusIsError(false);
@@ -177,8 +150,7 @@ export default function App() {
       setProjectDir(dir);
       setProject(loaded);
       editor.loadProject(loaded);
-      setVariablesJson(variablesToJson(loaded.variables));
-      setVariablesError(null);
+      setVariables(loaded.variables);
       setLogLines([]);
       setSelectedId(null);
       markSaved(loaded);
@@ -251,12 +223,6 @@ export default function App() {
     } catch (e) {
       setErrStatus(`Cancel failed: ${formatError(e)}`);
     }
-  };
-
-  const handleVariablesJsonChange = (value: string) => {
-    setVariablesJson(value);
-    const parsed = parseVariablesJson(value);
-    setVariablesError(parsed.ok ? null : parsed.error);
   };
 
   saveProjectRef.current = () => {
@@ -371,9 +337,8 @@ export default function App() {
         <PropertiesPanel
           node={selectedNode}
           editing={editor.editing}
-          variablesJson={variablesJson}
-          variablesError={variablesError}
-          onVariablesJsonChange={handleVariablesJsonChange}
+          variables={variables}
+          onVariablesChange={setVariables}
           onChange={(node, options) => editor.updateFlowNode(node, options)}
           onPropertyCommit={() => editor.commitHistory()}
           onDelete={

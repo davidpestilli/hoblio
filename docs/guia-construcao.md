@@ -1,6 +1,6 @@
 # Hoblio — Guia de construção e desenvolvimento
 
-Documento consolidado para **montar, compilar e estender** o sistema. Estado reflete o repo em `master` após **slice 5** (controle de fluxo If/ForEach + Studio).
+Documento consolidado para **montar, compilar e estender** o sistema. Estado reflete o repo em `master` após **slice 5** (controle de fluxo If/ForEach + Studio) e o editor visual de **Project variables** no Studio.
 
 Para histórico por entrega, veja também: [Fase 0](fase-0.md), [Slice 1](fase-mvp-slice1.md) · [2](fase-mvp-slice2.md) · [3 browser](fase-mvp-slice3-browser.md) · [4 flow editor](fase-mvp-slice4-flow-editor.md) · **[5 flow control](fase-mvp-slice5-flow-control.md)**.
 
@@ -142,6 +142,23 @@ Implementação em `crates/hoblio-studio/src/flow/` (React Flow 12), inspirada n
 
 Detalhes: [slice 4](fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEach](fase-mvp-slice5-flow-control.md).
 
+### Project variables (Studio)
+
+Sem nó selecionado (clique no canvas), o painel direito mostra **Project variables** — valores iniciais do run, persistidos em `flow.json` → `variables` (mesmo formato de antes: objeto JSON chave → valor).
+
+| Módulo | Função |
+|--------|--------|
+| `ProjectVariablesPanel.tsx` | UI: seções **Variables** (Text / Number / Boolean) e **Lists** (itens linha a linha); botões **+ Variable** / **+ List** |
+| `projectVariables.ts` | Particiona o objeto (`partitionVariables`), remonta ao salvar (`buildVariables`), nomes de listas/escalares para propriedades de nós |
+| `PropertiesPanel.tsx` | Integra o painel; **For each** → `<select>` das listas do projeto; **If** → datalist `{nome}`; **Log** → hint com variáveis escalares |
+| `App.tsx` | Estado `variables: Record<string, unknown>`; Save / Validate / Run usam esse objeto (não dependem de JSON válido no modo visual) |
+
+**Advanced JSON** ( `<details>` ): textarea legado para colar/importar ou editar valores aninhados (objetos JSON que a UI visual não expõe — aviso no painel).
+
+**Runtime / CLI:** inalterado — `hoblio-runtime` `seed_from_project`, ForEach, interpolação `{nome}`; `validate_project` continua exigindo que `list_variable` exista em `variables`.
+
+**Fora do escopo desta entrega:** nós no grafo para mutar variáveis em runtime (`set variable`, `add to list`, etc.) — planejado como próximo passo.
+
 Build frontend:
 
 ```powershell
@@ -176,7 +193,7 @@ Runtime: `cargo test -p hoblio-runtime --lib` (evita testes de browser opcionais
 |--------|---------|
 | **Biblioteca** | `chromiumoxide` **0.9** (CDP compatível com Chrome/Edge recentes) |
 | **Executável** | Detecção automática de `chrome.exe` / `msedge.exe` (`crates/hoblio-runtime/src/chromium_exe.rs`) — caminhos padrão Windows, como RPA desktop (ex. Power Automate). Override: `HOBLIO_CHROME_PATH` |
-| **Variáveis** | Em `flow.json` → `variables`; Studio edita JSON no painel direito (sem nó selecionado). Runtime: `browser_get_text`, ForEach, interpolação `{nome}` em `log` / `file_write` |
+| **Variáveis** | Em `flow.json` → `variables`; Studio edita no painel **Project variables** (visual + Advanced JSON). Runtime: `browser_get_text`, ForEach, interpolação `{nome}` em `log` / `file_write` |
 | **Caminhos `file_write`** | Relativos à **pasta do projeto** (`run` / Studio passam `projectDir`); ex.: `output/example-fetch.txt` |
 | **Demo** | `examples/browser-demo-flow` — `example.com` usa `body p` (o site não expõe mais `<h1>`) |
 | **`setup-dev.bat`** | Pré-check de espaço no C:, MSVC com carga C++, `cargo test`, `validate` nos exemplos; informa qual Chromium foi detectado; `--full` roda demos browser se houver Chrome/Edge |
@@ -264,9 +281,9 @@ meu-fluxo/
 - `waypoints`: pontos do tracado no canvas
 - `sourceHandle` / `targetHandle`: lados do conector ou nome da porta (`then`, `body`, …)
 
-**Variáveis:** objeto `variables` no `flow.json` (listas JSON para ForEach, escalares para If).
+**Variáveis:** objeto `variables` no `flow.json` — chaves com **array** = lista (For each); **string / number / boolean** = escalar (If, `{nome}` em textos). No Studio, use **Lists** / **Variables** ou **Advanced JSON**.
 
-Edição manual no JSON continua possível; o **Studio** é o editor visual preferido. Detalhes If/ForEach: [slice 5](fase-mvp-slice5-flow-control.md).
+Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. Detalhes If/ForEach: [slice 5](fase-mvp-slice5-flow-control.md); editor de variáveis: §4 **Project variables**.
 
 ---
 

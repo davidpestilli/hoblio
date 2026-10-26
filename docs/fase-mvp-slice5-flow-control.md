@@ -9,7 +9,7 @@
 | **Model** | `NodeKind`: `if`, `for_each`, `next_loop`, `exit_loop`; `ControlKind`; arestas com `port` (`then`, `else`, `body`, `after`, `main`); `validate_graph` + **`validate_project`** (listas, loop controls dentro do ForEach) |
 | **Runtime** | Interpretador multi-aresta, frames de loop, `expr.rs` (`{var}`), **`MAX_NODE_VISITS` (10k)**, cancelamento cooperativo (`cancel.rs`, Stop no Studio) |
 | **CLI** | `run` com diretório do projeto (`run_with_root`); `file_write` relativo à **pasta do projeto** |
-| **Studio** | Paleta If / For each / Next loop / Exit loop; handles then→ / else↓ / body→ / after↓; editor JSON de **variáveis**; Validate/Save/Open com erro no status; **Stop**; Ctrl+S / Ctrl+Z; log redimensionável (splitter superior); feedback de conexão inválida (`onConnectEnd`); undo de propriedades por campo (commit no blur) |
+| **Studio** | Paleta If / For each / Next loop / Exit loop; handles then→ / else↓ / body→ / after↓; **Project variables** (UI visual + Advanced JSON); For each com select de listas; Validate/Save/Open com erro no status; **Stop**; Ctrl+S / Ctrl+Z; log redimensionável (splitter superior); feedback de conexão inválida (`onConnectEnd`); undo de propriedades por campo (commit no blur) |
 | **Exemplo** | `examples/flow-control-demo` |
 | **QA** | `docs/eval-grok-flow-control.md`, `scripts/eval-flow-control.ps1` (21× PASS); reteste em `docs/eval-grok-retest-priorities.md` |
 
@@ -32,7 +32,15 @@ cargo run -p hoblio-cli -- run examples/flow-control-demo
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
 ```
 
-Studio: Open `examples/flow-control-demo`, edite variável `flag` no painel **Project variables** (sem nó selecionado), Run.
+Studio: Open `examples/flow-control-demo`, clique no canvas, em **Project variables** altere `flag` ou itens da lista `items` (**+ Item** / **Variables**), Run.
+
+### Project variables (UI visual)
+
+Entregue após o slice 5 — documentação em [guia-construcao.md §4](guia-construcao.md#project-variables-studio):
+
+- `ProjectVariablesPanel.tsx` + `projectVariables.ts` — escalares, listas, JSON avançado.
+- Formato em disco inalterado (`variables` objeto no `flow.json`).
+- Próximo passo sugerido: ações de runtime no grafo (set / append list).
 
 ## Limitações (slice 5)
 

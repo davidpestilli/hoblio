@@ -1,12 +1,13 @@
 import type { CompareOperator, ControlKind, FlowNode, ActionKind } from "./model";
 import { actionLabel, defaultAction, patchBrowserDomAction } from "./model";
+import { ProjectVariablesPanel } from "./ProjectVariablesPanel";
+import { listVariableNames, scalarVariableNames } from "./projectVariables";
 
 type Props = {
   node: FlowNode | null;
   editing: boolean;
-  variablesJson: string;
-  variablesError: string | null;
-  onVariablesJsonChange: (value: string) => void;
+  variables: Record<string, unknown>;
+  onVariablesChange: (variables: Record<string, unknown>) => void;
   onChange: (node: FlowNode, options?: { recordHistory?: boolean }) => void;
   onPropertyCommit: () => void;
   onDelete?: () => void;
@@ -15,14 +16,15 @@ type Props = {
 export function PropertiesPanel({
   node,
   editing,
-  variablesJson,
-  variablesError,
-  onVariablesJsonChange,
+  variables,
+  onVariablesChange,
   onChange,
   onPropertyCommit,
   onDelete,
 }: Props) {
   const readOnly = !editing;
+  const scalarVars = scalarVariableNames(variables);
+  const listVars = listVariableNames(variables);
 
   const draftChange = (node: FlowNode) => onChange(node, { recordHistory: false });
   const commitDraft = () => {
@@ -35,18 +37,11 @@ export function PropertiesPanel({
     return (
       <div className="panel properties">
         <h3>Project variables</h3>
-        <p className="hint">JSON object (ex. listas para For each).</p>
-        <label>
-          variables
-          <textarea
-            className="variables-editor"
-            rows={12}
-            value={variablesJson}
-            disabled={readOnly}
-            onChange={(e) => onVariablesJsonChange(e.target.value)}
-          />
-        </label>
-        {variablesError ? <p className="variables-error">{variablesError}</p> : null}
+        <ProjectVariablesPanel
+          variables={variables}
+          disabled={readOnly}
+          onChange={onVariablesChange}
+        />
       </div>
     );
   }
@@ -114,11 +109,17 @@ export function PropertiesPanel({
 
       {node.kind === "if" && node.control?.type === "if" && (
         <>
+          <datalist id="hoblio-scalar-vars">
+            {scalarVars.map((name) => (
+              <option key={name} value={`{${name}}`} />
+            ))}
+          </datalist>
           <label>
             Left
             <input
               value={node.control.left}
               disabled={readOnly}
+              list="hoblio-scalar-vars"
               onChange={(e) => patchIf({ left: e.target.value })}
               onBlur={commitDraft}
             />
@@ -143,6 +144,7 @@ export function PropertiesPanel({
             <input
               value={node.control.right}
               disabled={readOnly}
+              list="hoblio-scalar-vars"
               onChange={(e) => patchIf({ right: e.target.value })}
               onBlur={commitDraft}
             />
@@ -167,12 +169,34 @@ export function PropertiesPanel({
         <>
           <label>
             List variable
-            <input
-              value={node.control.list_variable}
-              disabled={readOnly}
-              onChange={(e) => patchForEach({ list_variable: e.target.value })}
-              onBlur={commitDraft}
-            />
+            {listVars.length > 0 ? (
+              <select
+                value={node.control.list_variable}
+                disabled={readOnly}
+                onChange={(e) => {
+                  patchForEach({ list_variable: e.target.value });
+                  commitDraft();
+                }}
+              >
+                {listVars.includes(node.control.list_variable) ? null : (
+                  <option value={node.control.list_variable}>
+                    {node.control.list_variable} (not in project)
+                  </option>
+                )}
+                {listVars.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={node.control.list_variable}
+                disabled={readOnly}
+                onChange={(e) => patchForEach({ list_variable: e.target.value })}
+                onBlur={commitDraft}
+              />
+            )}
           </label>
           <label>
             Item variable
@@ -184,7 +208,10 @@ export function PropertiesPanel({
             />
           </label>
           <p className="hint">
-            Lista JSON no projeto (ex. items). Corpo (→) deve voltar ao For each; after (↓) segue após o loop.
+            {listVars.length === 0
+              ? "Add a list under Project variables (click the canvas). "
+              : null}
+            Body (→) must return to For each; after (↓) runs when the loop finishes.
           </p>
         </>
       )}
@@ -225,6 +252,11 @@ export function PropertiesPanel({
                 onChange={(e) => patchActionDraft({ type: "log", message: e.target.value })}
                 onBlur={commitDraft}
               />
+              {scalarVars.length > 0 ? (
+                <span className="hint">
+                  Use {"{name}"} — e.g. {scalarVars.slice(0, 3).map((n) => `{${n}}`).join(", ")}
+                </span>
+              ) : null}
             </label>
           )}
 
