@@ -161,6 +161,20 @@ Implementação em `crates/hoblio-studio/src/flow/` (React Flow 12), inspirada n
 
 **Inserção na paleta:** `spawnPosition` — grade 4×200 px; contadores **separados** para controles (`y≈240`) e ações (`y≈400`); nó **End** padrão em `(720, 120)` para não colidir com Repeat/While num canvas limpo.
 
+**Grupos da paleta** (`App.tsx`, classe `palette-group` em `styles.css`; separadores `palette-divider` antes de Variables e do **End node**):
+
+| Grupo | Itens |
+|-------|--------|
+| **Utilitários** | Log, NoOp, Delay, HttpGet, ShowMessage |
+| **Arquivos** | FileWrite, FileAppend, FileRead |
+| **Browser** | BrowserNavigate, BrowserClick, Wait navigation, BrowserFill, BrowserWaitFor, BrowserGetText |
+| **Variables** | Set variable, Increase/Decrease variable, List clear, List append |
+| **Condicionais** | If (nó de controle) |
+| **Loops** | For each, While, Repeat N times, Next loop, Exit loop |
+| *(após divisor)* | **End node** |
+
+Todas as variantes executáveis de `ActionKind` expostas no Studio estão em Utilitários, Arquivos ou Browser; listas e variáveis numéricas ficam em **Variables**.
+
 Detalhes: [slice 4](mvp/fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEach](mvp/fase-mvp-slice5-flow-control.md).
 
 ### Variáveis no Studio (PAD-style)
@@ -183,7 +197,7 @@ Sem nó selecionado, o painel direito mostra **Flow variables** (índice somente
 | `projectVariables.ts` | `partitionVariables` / `buildVariables` (ordem de inserção no objeto, sem re-sort ao editar) |
 | `PropertiesPanel.tsx` | **Output variable** em BrowserGetText e SetVariable; renomear propaga refs; If/Log/FileWrite usam seeds + produtores |
 | `useFlowEditor.ts` | `addAction(..., seedVariables)` para defaults únicos; `applyVariableRename` |
-| `App.tsx` | Paleta **Variables → Set variable**; estado `variables`; Save / Validate / Run |
+| `App.tsx` | Paleta agrupada (Utilitários / Arquivos / Browser / Variables / Condicionais / Loops); estado `variables`; Save / Validate / Run |
 
 **Advanced JSON** ( `<details>` ): colar/importar ou editar valores aninhados que a UI visual não expõe.
 
@@ -293,6 +307,7 @@ Rodadas documentadas em [avaliacao/relatorios/2026-10-26/](avaliacao/relatorios/
 | **B2** | CLI / runtime | Resumos `ActionExecuted` no stdout; evento `action_executed` no `--jsonl` |
 | **B3** | Docs | Harness flow-control documentado como **24 PASS** |
 | **B4** | Studio | Paleta “Wait navigation”; grade de spawn; End em `(720,120)`; contadores separados controles/ações |
+| **B6** | Studio | Paleta com grupos **Utilitários**, **Arquivos**, **Browser** (antes só Variables / Condicionais / Loops); ver tabela em § Editor de fluxo |
 | **B5** | Log / browser | Filtro `chromiumoxide=error`; pausa no shutdown do browser |
 | **N1** | Studio | **Limpar fluxo** zera `projectDir` — Save pede pasta de novo |
 | **N2** | Studio | `flowToGraph`: não persistir `ui.sourceHandle` quando `port` já descreve a aresta (evita “Unsaved changes” falso) |

@@ -329,6 +329,7 @@ export default function App() {
       <div className="main">
         <aside className="panel palette">
           <h3>Palette</h3>
+          <h4 className="palette-group">Utilitários</h4>
           <button type="button" onClick={() => addAction("log")}>
             Log
           </button>
@@ -338,6 +339,13 @@ export default function App() {
           <button type="button" onClick={() => addAction("delay")}>
             Delay
           </button>
+          <button type="button" onClick={() => addAction("http_get")}>
+            HttpGet
+          </button>
+          <button type="button" onClick={() => addAction("show_message")}>
+            ShowMessage
+          </button>
+          <h4 className="palette-group">Arquivos</h4>
           <button type="button" onClick={() => addAction("file_write")}>
             FileWrite
           </button>
@@ -347,9 +355,7 @@ export default function App() {
           <button type="button" onClick={() => addAction("file_read")}>
             FileRead
           </button>
-          <button type="button" onClick={() => addAction("http_get")}>
-            HttpGet
-          </button>
+          <h4 className="palette-group">Browser</h4>
           <button type="button" onClick={() => addAction("browser_navigate")}>
             BrowserNavigate
           </button>
@@ -367,9 +373,6 @@ export default function App() {
           </button>
           <button type="button" onClick={() => addAction("browser_get_text")}>
             BrowserGetText
-          </button>
-          <button type="button" onClick={() => addAction("show_message")}>
-            ShowMessage
           </button>
           <hr className="palette-divider" />
           <h4 className="palette-group">Variables</h4>
