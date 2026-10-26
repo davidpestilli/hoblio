@@ -26,9 +26,10 @@ const FALLBACK_NODE_HEIGHT = 56;
 interface FlowCanvasProps {
   controller: FlowEditorController;
   onSelectNodeId: (nodeId: string | null) => void;
+  onClearFlow?: () => void;
 }
 
-function FlowSurface({ controller, onSelectNodeId }: FlowCanvasProps) {
+function FlowSurface({ controller, onSelectNodeId, onClearFlow }: FlowCanvasProps) {
   const { fitView } = useReactFlow();
   const store = useStoreApi();
   const [guides, setGuides] = useState<AlignmentGuide[]>([]);
@@ -189,7 +190,7 @@ function FlowSurface({ controller, onSelectNodeId }: FlowCanvasProps) {
   return (
     <FlowEditorProvider value={editorApi}>
       <div className="flow-canvas-wrap">
-        <FlowToolbar controller={controller} />
+        <FlowToolbar controller={controller} onClearFlow={onClearFlow} />
         <div className="flow-canvas-inner">
           <ReactFlow
             nodes={controller.nodes}

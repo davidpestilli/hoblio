@@ -136,7 +136,8 @@ Implementação em `crates/hoblio-studio/src/flow/` (React Flow 12), inspirada n
 |--------|--------|
 | `useFlowEditor.ts` | Canvas, undo/redo, multi-port connect, `onConnectEnd` (feedback), Stop/cancel no run |
 | `FlowCanvas.tsx` | React Flow, guias de alinhamento, tecla Delete |
-| `FlowToolbar.tsx` | Exibição/Edição, desfazer/refazer, rótulo da aresta selecionada |
+| `FlowToolbar.tsx` | Exibição/Edição, desfazer/refazer, **Limpar fluxo**, apagar seleção, rótulo da aresta selecionada |
+| `App.tsx` | **`clearFlow`**: diálogo de confirmação → `projectWithClearedFlow` (grafo mínimo Start–End de `defaultProject()`, `variables: {}`), mantém `manifest` e `projectDir`; `editor.loadProject`; indisponível durante **Run** |
 | `WaypointEdge.tsx` | Tracado com pontos de passagem |
 | `flowConvert.ts` | Conversão `flow.json` ↔ nós/arestas do React Flow |
 

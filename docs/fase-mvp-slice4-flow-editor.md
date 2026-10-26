@@ -7,7 +7,7 @@
 | Área | Detalhe |
 |------|---------|
 | **Canvas** | `crates/hoblio-studio/src/flow/` — `FlowCanvas`, `FlowToolbar`, `WaypointEdge`, alinhamento ao arrastar, `@xyflow/react` 12 |
-| **Modos** | **Exibição** / **Edição**; desfazer/refazer (40 níveis); Delete/Backspace em seleção |
+| **Modos** | **Exibição** / **Edição**; desfazer/refazer (40 níveis); Delete/Backspace em seleção; **Limpar fluxo** (reset do canvas + variáveis, ver `App.tsx` / `FlowToolbar`) |
 | **Nós** | Paleta de ações + **End node**; handles de entrada/saída em **topo, direita, baixo, esquerda** (Start só saída; End só entrada) |
 | **Conexões** | Criar, religar extremos, apagar, rótulo na toolbar; pontos de passagem (+) no tracado |
 | **Persistência** | `flow.json` — arestas com `id`, `label`, `ui.waypoints`, `ui.sourceHandle`, `ui.targetHandle` (`hoblio-model`) |

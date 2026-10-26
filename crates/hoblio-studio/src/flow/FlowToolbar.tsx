@@ -5,6 +5,7 @@ import { nodeTitle } from "./flowTypes";
 
 interface FlowToolbarProps {
   controller: FlowEditorController;
+  onClearFlow?: () => void;
 }
 
 function ToolButton({
@@ -33,7 +34,7 @@ function ToolButton({
   );
 }
 
-export function FlowToolbar({ controller }: FlowToolbarProps) {
+export function FlowToolbar({ controller, onClearFlow }: FlowToolbarProps) {
   const [customOpen, setCustomOpen] = useState(false);
   const [labelDraft, setLabelDraft] = useState("");
 
@@ -90,6 +91,13 @@ export function FlowToolbar({ controller }: FlowToolbarProps) {
               onClick={controller.deleteSelection}
               title="Remove nós ou conexões selecionados (Delete / Backspace)"
             />
+            {onClearFlow ? (
+              <ToolButton
+                label="Limpar fluxo"
+                onClick={onClearFlow}
+                title="Remove todo o diagrama e variáveis; mantém Start e End"
+              />
+            ) : null}
           </div>
         ) : null}
       </div>

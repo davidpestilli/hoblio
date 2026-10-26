@@ -33,6 +33,7 @@ npm run tauri dev
    - **Religar** aresta no modo Edição.
    - **Tracado:** aresta selecionada → **+** no segmento; waypoints.
    - **Desfazer / Refazer** (toolbar ou **Ctrl+Z** / **Ctrl+Shift+Z**).
+   - **Limpar fluxo** — repõe o diagrama a Start + End (uma ligação), zera **Project variables**; pede confirmação; mantém nome do projeto e pasta aberta (precisa **Save** para gravar no disco).
 3. **Painel Properties** (direita): parâmetros do nó selecionado; **Delete node** no modo Edição.
 4. **Sem nó selecionado:** **Project variables** — seções **Variables** e **Lists** (ou **Advanced JSON**); listas para For each, escalares (ex. `flag`) para If.
 5. **Validate** — `validate_project` (grafo + variáveis); erros em vermelho na barra.

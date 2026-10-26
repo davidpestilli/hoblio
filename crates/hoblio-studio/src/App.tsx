@@ -35,6 +35,15 @@ function isRunCancelledMessage(message: string): boolean {
   return lower.includes("cancelled by user") || lower.includes("run cancelled");
 }
 
+function projectWithClearedFlow(base: FlowProject): FlowProject {
+  const blank = defaultProject();
+  return {
+    ...base,
+    flow: blank.flow,
+    variables: {},
+  };
+}
+
 export default function App() {
   const [project, setProject] = useState<FlowProject>(() => defaultProject());
   const [projectDir, setProjectDir] = useState<string | null>(null);
@@ -132,6 +141,30 @@ export default function App() {
       return true;
     }
   }, [syncProjectFromCanvas]);
+
+  const clearFlow = async () => {
+    if (running) {
+      return;
+    }
+    try {
+      const proceed = await confirm(
+        "Remover todos os nós e conexões do fluxo e limpar as variáveis do projeto? O diagrama ficará apenas com Start e End.",
+        { title: "Limpar fluxo", kind: "warning" },
+      );
+      if (!proceed) {
+        return;
+      }
+      const current = syncProjectFromCanvas();
+      const cleared = projectWithClearedFlow(current);
+      setProject(cleared);
+      editor.loadProject(cleared);
+      setVariables({});
+      setSelectedId(null);
+      setOkStatus("Fluxo limpo");
+    } catch (e) {
+      setErrStatus(`Limpar fluxo falhou: ${formatError(e)}`);
+    }
+  };
 
   const openProject = async () => {
     try {
@@ -332,7 +365,11 @@ export default function App() {
           </button>
         </aside>
         <div className="canvas">
-          <FlowCanvas controller={editorWithActive} onSelectNodeId={setSelectedId} />
+          <FlowCanvas
+            controller={editorWithActive}
+            onSelectNodeId={setSelectedId}
+            onClearFlow={() => void clearFlow()}
+          />
         </div>
         <PropertiesPanel
           node={selectedNode}
