@@ -11,7 +11,7 @@
 | **CLI** | `run` com diretório do projeto (`run_with_root`); `file_write` relativo à **pasta do projeto** |
 | **Studio** | Paleta If / For each / Next loop / Exit loop; handles then→ / else↓ / body→ / after↓; **Project variables** (UI visual + Advanced JSON); For each com select de listas; Validate/Save/Open com erro no status; **Stop**; Ctrl+S / Ctrl+Z; log redimensionável (splitter superior); feedback de conexão inválida (`onConnectEnd`); undo de propriedades por campo (commit no blur) |
 | **Exemplo** | `examples/flow-control-demo` |
-| **QA** | `docs/eval-grok-flow-control.md`, `scripts/eval-flow-control.ps1` (21× PASS); reteste em `docs/eval-grok-retest-priorities.md` |
+| **QA** | `docs/eval-grok-flow-control.md`, `scripts/eval-flow-control.ps1` (24× PASS); reteste em `docs/eval-grok-retest-priorities.md` |
 
 ## Formato JSON (resumo)
 
