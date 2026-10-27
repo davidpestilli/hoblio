@@ -136,16 +136,26 @@ Após **Run**, nós que **produzem** variáveis (`show_get_user_input`, `browser
 
 No Studio: **Save** na pasta do projeto.
 
-- `manifest.json` — metadados
-- `flow.json` — nós, arestas (`port` quando If/ForEach), `variables`
+- `manifest.json` — metadados; opcional **`flows`** (filhos registrados) e **`entry_flow`**
+- `flow.json` — nós, arestas, `variables`; opcional **`subflows`** (subfluxos embutidos)
+- `flows/*.json` — fluxos filhos referenciados por **`run_flow`** (`flow_id` ou `path`)
 
-Detalhes: [guia de construção §9](guia-construcao.md) · [slice 5](mvp/fase-mvp-slice5-flow-control.md).
+Detalhes: [slice 9 — composição](mvp/fase-mvp-slice9-flow-compose.md) · [slice 5](mvp/fase-mvp-slice5-flow-control.md).
+
+### Composição (slice 9)
+
+- Paleta **Run flow** — encadeia outro JSON ou subfluxo embutido (`flow_id`).
+- **New subflow** / abas **⎇** — editor visual de `subflows` no mesmo arquivo.
+- **Variable scope** `isolated` — só `outputs` voltam ao fluxo pai.
+- **Validate** com pasta aberta valida também ciclos entre filhos.
+
+Exemplos: `examples/flow-compose-demo`, `flow-compose-isolated`, `flow-compose-subflow`.
 
 ---
 
 ## 6. O que ainda não está pronto
 
-- **Switch**, subfluxos aninhados, ramo **On error** dedicado no grafo
+- **Switch**, ramo **On error** dedicado no grafo
 - **Excel**, **e-mail**, HTTP com proxy/OAuth
 - UIA Windows além do pacote browser
 - Importar fluxos Power Automate Desktop

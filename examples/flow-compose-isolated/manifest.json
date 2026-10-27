@@ -1,0 +1,11 @@
+{
+  "name": "flow-compose-isolated",
+  "version": "0.1.0",
+  "description": "Isolated child scope — internal vars do not leak",
+  "flows": {
+    "secret_step": {
+      "path": "flows/secret.json",
+      "outputs": ["result"]
+    }
+  }
+}

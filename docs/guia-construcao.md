@@ -246,7 +246,7 @@ Sem nó selecionado, o painel direito mostra **Flow variables** (índice somente
 
 **Runtime:** `seed_from_project` + `browser_get_text` + `set_variable` + item ForEach → mapa de run; interpolação `{nome}` em `log`, `file_write`, `set_variable.value`, operandos If.
 
-**Ainda fora do escopo:** validação estática de `{refs}` desconhecidas; subfluxos com escopo local; ramo **On error** dedicado no grafo.
+**Ainda fora do escopo:** validação estática de `{refs}` desconhecidas; ramo **On error** dedicado no grafo. **Composição / subfluxos:** [slice 9](mvp/fase-mvp-slice9-flow-compose.md) (`run_flow`, `subflows`, escopo `isolated`).
 
 Build frontend:
 
@@ -318,23 +318,79 @@ Listas em run são **JSON array** em string (mesmo formato que listas em Project
 
 ---
 
-## 4.5 Avaliação Grok (A/B/C + regressão)
+## 4.5 Composição de fluxos (slice 9)
+
+Child flows estilo Power Automate: orquestrador + JSON filhos e/ou subfluxos embutidos no mesmo arquivo.
+
+| Peça | Função |
+|------|--------|
+| **Ação `run_flow`** | `flow_id` (manifest ou `subflows`), `path`, `inputs`, `outputs`, `variable_scope` (`inherit` \| `isolated`), `share_browser` |
+| **Modelo** | `manifest.flows`, `entry_flow`, `FlowGraph.subflows` (`SubflowBundle`), `RunFlowVariableScope` |
+| **Runtime** | `crates/hoblio-runtime/src/run_flow.rs`, `run_graph` recursivo em `exec.rs`; eventos `flow_started` / `flow_finished` |
+| **Serde** | `crates/hoblio-serde/src/composition.rs` — resolver filho, `validate_project_composition`, `save_flow_document`, `list_project_flows` |
+| **Studio** | Abas Entry + `manifest.flows` + abas **⎇ subfluxo**; `FlowTabs`, `subflowEditor.ts`, `SubflowManagePanel`; paleta **Run flow** / **New subflow**; variáveis **Project** vs **Subflow** |
+| **Exemplos** | `flow-compose-demo`, `flow-compose-isolated`, `flow-compose-subflow` (com `ui` nos nós para o canvas) |
+| **Harness** | `scripts/eval-flow-compose.ps1` — **19 PASS**, 0 FAIL ([protocolo Grok](avaliacao/protocolos/eval-grok-flow-compose.md)) |
+
+```powershell
+cargo run -p hoblio-cli -- validate examples/flow-compose-demo
+cargo run -p hoblio-cli -- run examples/flow-compose-demo
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-compose.ps1
+```
+
+Detalhe de produto e limites remanescentes: [fase-mvp-slice9-flow-compose.md](mvp/fase-mvp-slice9-flow-compose.md).
+
+**Comportamento importante:**
+
+- **`isolated`:** só variáveis listadas em `outputs` voltam ao pai; `outputs` ausente ou `[]` → nenhuma merge.
+- **Subfluxo → subfluxo:** irmãos no mesmo `flow.json` resolvem via mapa `subflows` (não só no grafo da entry).
+- **Paths:** `resolve_project_flow_path` — caminho relativo canonicalizado **dentro** da pasta do projeto (`../` e absolutos rejeitados).
+- **CLI `run`:** com `project_root`, chama `validate_project_composition` antes de executar (ciclos / profundidade 16), alinhado ao Studio.
+
+---
+
+## 4.6 Avaliação Grok (A/B/C + regressão)
 
 | Script | Escopo |
 |--------|--------|
-| `scripts/eval-flow-control.ps1` | Slice 5 — If/ForEach (**24 PASS** esperado) |
-| `scripts/eval-rpa-abc.ps1` | Slices 6–8 + regressão `flow-control-demo` + build Studio |
+| `scripts/eval-flow-control.ps1` | Slice 5 — If/ForEach (**28 PASS** esperado) |
+| `scripts/eval-rpa-abc.ps1` | Slices 6–8 + regressão `flow-control-demo` + build Studio (**27 PASS**) |
+| `scripts/eval-flow-compose.ps1` | Slice 9 — composição / subfluxos (**19 PASS**) |
 
 Documentação detalhada para o Grok bot: [eval-grok-rpa-abc.md](avaliacao/protocolos/eval-grok-rpa-abc.md) (matriz CLI + cenários manuais Studio). Relatórios: [avaliacao/relatorios/](avaliacao/relatorios/).
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-rpa-abc.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-compose.ps1
 ```
 
 ---
 
-## 4.7 Correções QA (Grok, out/2026)
+## 4.7 Correções QA — composição (Grok, 27/out/2026)
+
+Rodada **APROVADO COM RESSALVAS** → correções abaixo fecham os itens **Alto** e **Médio** do relatório `eval-flow-compose` (revalidar com `eval-flow-compose.ps1` + checklist §4 do protocolo).
+
+| ID | Área | Correção |
+|----|------|----------|
+| **A1** | Runtime | `merge_isolated_outputs`: sem `outputs` / lista vazia não copia variáveis do filho (teste unitário em `run_flow.rs`) |
+| **A2** | Studio / exemplos | Auto-layout quando o nó não tem `ui`; `flowToGraph` não persiste `ui` até mover nó; exemplos `flow-compose-*` com posições salvas |
+| **A3** | Runtime / serde | `SubflowBundle::as_graph_with_subflows`; resolução e validação de subfluxo chamando irmão; detecção de ciclo inline |
+| **M1** | Serde | `resolve_project_flow_path` — rejeita escape da pasta do projeto |
+| **M2** | Runtime / CLI | `run_project_with_listener` valida composição quando há `project_root`; harness **T-N02** (`run` em ciclo A↔B) |
+| **M3** | Studio | Troca de aba no **mesmo arquivo** sem diálogo; baseline `markSaved` ao trocar aba; menos falso “dirty” |
+| **M4** | Studio | **Run** chama validate antes de gravar o owner no disco |
+| **M5** | Studio | Pilha `docUndoRef` — Ctrl+Z restaura documento owner após rename/delete de subfluxo |
+| **M6** | Studio | `onCloseRequested` — confirma fechar com alterações não salvas |
+| **B3** | Model | `validate_graph`: ids inválidos em `subflows` (ex. `../evil`) rejeitados |
+| **B4** | Studio | Botão **Rename** desabilitado quando o id alvo já existe |
+| **B5** | Studio | Contraste das abas de fluxo (`styles.css`) |
+
+**Harness:** contagem **18 → 19 PASS** (inclusão de **T-N02**). Documentação: [slice 9](mvp/fase-mvp-slice9-flow-compose.md), [guia de utilização §5](guia-utilizacao.md).
+
+---
+
+## 4.8 Correções QA (Grok, out/2026)
 
 Rodadas documentadas em [avaliacao/relatorios/2026-10-26/](avaliacao/relatorios/2026-10-26/).
 
@@ -355,7 +411,7 @@ Rodadas documentadas em [avaliacao/relatorios/2026-10-26/](avaliacao/relatorios/
 
 ---
 
-## 4.6 Browser (CDP), variáveis e `setup-dev`
+## 4.9 Browser (CDP), variáveis e `setup-dev`
 
 | Tópico | Detalhe |
 |--------|---------|
@@ -386,6 +442,7 @@ cargo run -p hoblio-cli -- run <pasta-projeto> --jsonl
 cargo test
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-rpa-abc.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-compose.ps1
 ```
 
 Teste de browser com rede + Chrome (ignorado por padrão):
@@ -405,6 +462,7 @@ cargo run -p hoblio-cli -- run examples/resilience-demo
 cargo run -p hoblio-cli -- run examples/web-demo-flow
 cargo run -p hoblio-cli -- run examples/message-timer-demo
 cargo run -p hoblio-cli -- run examples/browser-demo-flow
+cargo run -p hoblio-cli -- run examples/flow-compose-demo
 ```
 
 ---
@@ -457,7 +515,7 @@ meu-fluxo/
 
 Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. Controle de fluxo: [slice 5–8](mvp/fase-mvp-slice5-flow-control.md); variáveis PAD-style: §4 **Variáveis no Studio**.
 
-**Exemplos por entrega:** `flow-control-demo` · `variables-loops-demo` · `files-lists-demo` · `resilience-demo` · `browser-demo-flow`.
+**Exemplos por entrega:** `flow-control-demo` · `variables-loops-demo` · `files-lists-demo` · `resilience-demo` · `browser-demo-flow` · `flow-compose-demo` / `flow-compose-isolated` / `flow-compose-subflow`.
 
 ---
 
@@ -469,9 +527,9 @@ Desenvolvimento local em `master`. Commits feature + mensagens descritivas. Remo
 
 ## 11. Limitações conhecidas (dev)
 
-- **If / ForEach / While / Repeat / next / exit** (slices 5–6); sem `switch` ou subfluxos aninhados.
+- **If / ForEach / While / Repeat / next / exit** (slices 5–6); **`run_flow` + subfluxos** (slice 9); sem `switch`.
 - **Retry/continue** por nó (slice 8); sem aresta **On error** separada no grafo.
-- Ciclos inválidos fora de cabeça de loop: run aborta em **10k visitas**; validate nem sempre detecta.
+- Ciclos inválidos fora de cabeça de loop: run aborta em **10k visitas**; validate nem sempre detecta (composição `run_flow`: ciclos detectados em validate / run com `project_root`).
 - Browser: instância **controlada pelo runtime**; `wait_for_navigation` após clique sem navegação espera até timeout.
 - `file_read` UTF-8; sem `list_length` / `list_remove` dedicados.
 - Excel, e-mail, HTTP avançado: fora ou adiados — [decisoes-produto.md](produto/decisoes-produto.md).
@@ -485,6 +543,8 @@ Desenvolvimento local em `master`. Commits feature + mensagens descritivas. Remo
 - [Avaliação — índice](avaliacao/README.md)
 - [Avaliação Grok — entregas A/B/C](avaliacao/protocolos/eval-grok-rpa-abc.md)
 - [Avaliação Grok — flow control (slice 5)](avaliacao/protocolos/eval-grok-flow-control.md)
+- [Avaliação Grok — composição (slice 9)](avaliacao/protocolos/eval-grok-flow-compose.md)
+- [Slice 9 — composição](mvp/fase-mvp-slice9-flow-compose.md)
 - [Troubleshooting Windows](troubleshooting-windows.md)
 - [Estudo de viabilidade](historico/estudo-viabilidade.md)
 - [Guia de utilização](guia-utilizacao.md)

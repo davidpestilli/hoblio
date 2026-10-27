@@ -1,0 +1,40 @@
+{
+  "start": "start",
+  "variables": {
+    "parent_marker": "visible"
+  },
+  "nodes": [
+    { "id": "start", "kind": "start", "label": "Start", "ui": { "x": 80, "y": 120 } },
+    {
+      "id": "run_secret",
+      "kind": "action",
+      "label": "Run secret (isolated)",
+      "ui": { "x": 300, "y": 120 },
+      "action": {
+        "type": "run_flow",
+        "flow_id": "secret_step",
+        "variable_scope": "isolated",
+        "inputs": {
+          "seed": "from-parent"
+        },
+        "outputs": ["result"]
+      }
+    },
+    {
+      "id": "log_parent",
+      "kind": "action",
+      "label": "Log parent",
+      "ui": { "x": 520, "y": 120 },
+      "action": {
+        "type": "log",
+        "message": "parent_marker={parent_marker} result={result}"
+      }
+    },
+    { "id": "end", "kind": "end", "label": "End", "ui": { "x": 740, "y": 120 } }
+  ],
+  "edges": [
+    { "from": "start", "to": "run_secret" },
+    { "from": "run_secret", "to": "log_parent" },
+    { "from": "log_parent", "to": "end" }
+  ]
+}

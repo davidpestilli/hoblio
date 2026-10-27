@@ -1,0 +1,5 @@
+{
+  "name": "flow-compose-subflow",
+  "version": "0.1.0",
+  "description": "Embedded subflow in flow.json (FUNCTION-style)"
+}

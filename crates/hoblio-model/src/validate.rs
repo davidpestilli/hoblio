@@ -54,6 +54,14 @@ pub enum ValidationError {
     SetVariableNameMissing(NodeId),
     #[error("node `{0}` retry_count {1} exceeds maximum allowed")]
     InvalidRetryCount(NodeId, u32),
+    #[error("node `{0}` run_flow requires flow_id or path")]
+    RunFlowMissingTarget(NodeId),
+    #[error("run_flow composition cycle: {0}")]
+    RunFlowCycle(String),
+    #[error("run_flow composition exceeds maximum depth {0}")]
+    RunFlowDepthExceeded(usize),
+    #[error("run_flow target `{0}` not found for node `{1}`")]
+    RunFlowTargetNotFound(String, NodeId),
 }
 
 pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
@@ -166,6 +174,23 @@ pub fn validate_graph(graph: &FlowGraph) -> Result<(), ValidationError> {
         return Err(ValidationError::CycleWithoutForEach(ids));
     }
 
+    if let Some(subflows) = &graph.subflows {
+        for (name, bundle) in subflows {
+            if !is_valid_variable_name(name) {
+                return Err(ValidationError::RunFlowTargetNotFound(
+                    format!("invalid embedded subflow id `{name}`"),
+                    name.clone(),
+                ));
+            }
+            validate_graph(&bundle.as_graph()).map_err(|e| {
+                ValidationError::RunFlowTargetNotFound(
+                    format!("subflow `{name}`: {e}"),
+                    name.clone(),
+                )
+            })?;
+        }
+    }
+
     Ok(())
 }
 
@@ -237,6 +262,12 @@ fn validate_variable_producers(graph: &FlowGraph) -> Result<(), ValidationError>
                     node.id.clone(),
                     String::new(),
                 ));
+            }
+            if matches!(action, ActionKind::RunFlow { flow_id, path, .. }
+                if flow_id.as_deref().unwrap_or("").is_empty()
+                    && path.as_deref().unwrap_or("").is_empty())
+            {
+                return Err(ValidationError::RunFlowMissingTarget(node.id.clone()));
             }
             for name in action.produced_variables() {
                 if !is_valid_variable_name(name) {
@@ -610,6 +641,7 @@ mod tests {
                     ui: None,
                 },
             ],
+            subflows: None,
         }
     }
 

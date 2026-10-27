@@ -111,6 +111,8 @@ export interface FlowEditorController {
   undo: () => void;
   redo: () => void;
   loadProject: (project: FlowProject) => void;
+  /** Reload canvas from a flow without clearing undo history. */
+  applyProjectView: (project: FlowProject) => void;
   fitViewToken: number;
   toFlowGraph: () => FlowGraph;
   onConnectionRejected?: (message: string) => void;
@@ -199,21 +201,33 @@ export function useFlowEditor(
     });
   }, [applySnapshot]);
 
+  const canvasFromProject = useCallback((project: FlowProject): CanvasSnapshot => {
+    const canvas = graphToFlow(project.flow);
+    return {
+      nodes: canvas.nodes,
+      edges: canvas.edges,
+      start: project.flow.start,
+    };
+  }, []);
+
+  const applyProjectView = useCallback(
+    (project: FlowProject) => {
+      applySnapshot(canvasFromProject(project));
+      setFitViewToken((t) => t + 1);
+    },
+    [applySnapshot, canvasFromProject],
+  );
+
   const loadProject = useCallback(
     (project: FlowProject) => {
-      const canvas = graphToFlow(project.flow);
-      const snapshot: CanvasSnapshot = {
-        nodes: canvas.nodes,
-        edges: canvas.edges,
-        start: project.flow.start,
-      };
+      const snapshot = canvasFromProject(project);
       applySnapshot(snapshot);
       setHistory({ items: [cloneSnapshot(snapshot)], index: 0 });
       controlSpawnRef.current = 0;
       actionSpawnRef.current = 0;
       setFitViewToken((t) => t + 1);
     },
-    [applySnapshot],
+    [applySnapshot, canvasFromProject],
   );
 
   const toFlowGraph = useCallback((): FlowGraph => flowToGraph(nodes, edges, start), [edges, nodes, start]);
@@ -672,6 +686,7 @@ export function useFlowEditor(
     undo,
     redo,
     loadProject,
+    applyProjectView,
     fitViewToken,
     toFlowGraph,
     addAction,

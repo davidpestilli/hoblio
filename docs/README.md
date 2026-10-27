@@ -31,6 +31,7 @@ Entregas incrementais em [mvp/](mvp/):
 | 6 | [fase-mvp-slice6-variables-loops.md](mvp/fase-mvp-slice6-variables-loops.md) |
 | 7 | [fase-mvp-slice7-files-lists.md](mvp/fase-mvp-slice7-files-lists.md) |
 | 8 | [fase-mvp-slice8-browser-resilience.md](mvp/fase-mvp-slice8-browser-resilience.md) |
+| 9 | [fase-mvp-slice9-flow-compose.md](mvp/fase-mvp-slice9-flow-compose.md) — `run_flow`, subfluxos, Studio |
 
 ## Avaliação e relatórios
 
@@ -41,4 +42,5 @@ Harnesses na raiz do repo:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-control.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-rpa-abc.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-compose.ps1
 ```

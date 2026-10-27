@@ -1,7 +1,9 @@
 export type RunEvent =
   | { kind: "run_started"; project: string }
-  | { kind: "node_enter"; node_id: string }
-  | { kind: "node_exit"; node_id: string }
+  | { kind: "flow_started"; flow_ref: string; parent_node_id?: string }
+  | { kind: "flow_finished"; flow_ref: string; end_node_id: string }
+  | { kind: "node_enter"; node_id: string; flow_ref?: string }
+  | { kind: "node_exit"; node_id: string; flow_ref?: string }
   | {
       kind: "action_executed";
       node_id: string;
@@ -23,10 +25,14 @@ export function formatRunEvent(e: RunEvent): string {
   switch (e.kind) {
     case "run_started":
       return `run_started · project=${e.project}`;
+    case "flow_started":
+      return `flow_started · ${e.flow_ref}${e.parent_node_id ? ` (from ${e.parent_node_id})` : ""}`;
+    case "flow_finished":
+      return `flow_finished · ${e.flow_ref} · end=${e.end_node_id}`;
     case "node_enter":
-      return `node_enter · ${e.node_id}`;
+      return `node_enter · ${e.node_id}${e.flow_ref ? ` · ${e.flow_ref}` : ""}`;
     case "node_exit":
-      return `node_exit · ${e.node_id}`;
+      return `node_exit · ${e.node_id}${e.flow_ref ? ` · ${e.flow_ref}` : ""}`;
     case "action_executed":
       return `action_executed · ${e.node_id} · ${e.summary}`;
     case "run_finished":

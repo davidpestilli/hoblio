@@ -1,0 +1,66 @@
+{
+  "start": "start",
+  "variables": {
+    "name": "Embedded"
+  },
+  "subflows": {
+    "greet_inline": {
+      "start": "sf_start",
+      "variables": {
+        "name": "fallback"
+      },
+      "nodes": [
+        { "id": "sf_start", "kind": "start", "label": "Start", "ui": { "x": 80, "y": 120 } },
+        {
+          "id": "sf_set",
+          "kind": "action",
+          "label": "Set greeting",
+          "ui": { "x": 300, "y": 120 },
+          "action": {
+            "type": "set_variable",
+            "variable": "greeting",
+            "value": "Hi {name} (inline)"
+          }
+        },
+        { "id": "sf_end", "kind": "end", "label": "End", "ui": { "x": 520, "y": 120 } }
+      ],
+      "edges": [
+        { "from": "sf_start", "to": "sf_set" },
+        { "from": "sf_set", "to": "sf_end" }
+      ]
+    }
+  },
+  "nodes": [
+    { "id": "start", "kind": "start", "label": "Start", "ui": { "x": 80, "y": 120 } },
+    {
+      "id": "run_inline",
+      "kind": "action",
+      "label": "Run inline subflow",
+      "ui": { "x": 300, "y": 120 },
+      "action": {
+        "type": "run_flow",
+        "flow_id": "greet_inline",
+        "inputs": {
+          "name": "{name}"
+        },
+        "outputs": ["greeting"]
+      }
+    },
+    {
+      "id": "log_it",
+      "kind": "action",
+      "label": "Log",
+      "ui": { "x": 520, "y": 120 },
+      "action": {
+        "type": "log",
+        "message": "Message: {greeting}"
+      }
+    },
+    { "id": "end", "kind": "end", "label": "End", "ui": { "x": 740, "y": 120 } }
+  ],
+  "edges": [
+    { "from": "start", "to": "run_inline" },
+    { "from": "run_inline", "to": "log_it" },
+    { "from": "log_it", "to": "end" }
+  ]
+}

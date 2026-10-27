@@ -25,6 +25,9 @@ pub fn execute_action(
             Ok(format!("log: {message}"))
         }
         ActionKind::NoOp => Ok("noop".into()),
+        ActionKind::RunFlow { .. } => {
+            bail!("run_flow is executed by the graph runner, not execute_action")
+        }
         ActionKind::FileWrite { path, content } => {
             let path = interpolate(path, vars)?;
             let content = interpolate(content, vars)?;

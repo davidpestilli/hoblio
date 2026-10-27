@@ -17,6 +17,7 @@ import type {
 import { actionLabel, defaultAction, patchBrowserDomAction, patchBrowserNavigate } from "./model";
 import { ProjectVariablesPanel } from "./ProjectVariablesPanel";
 import { listVariableNames } from "./projectVariables";
+import { SubflowManagePanel } from "./SubflowManagePanel";
 
 function LastRunValues({ lastRunVariables }: { lastRunVariables?: Record<string, string> }) {
   if (!lastRunVariables || Object.keys(lastRunVariables).length === 0) {
@@ -49,6 +50,13 @@ type Props = {
   onChange: (node: FlowNode, options?: { recordHistory?: boolean }) => void;
   onPropertyCommit: () => void;
   onDelete?: () => void;
+  embeddedSubflowIds?: string[];
+  onEditSubflow?: (subflowId: string) => void;
+  subflowContext?: { id: string; ownerPath: string } | null;
+  onRenameSubflow?: (subflowId: string, newId: string) => void;
+  onDeleteSubflow?: (subflowId: string) => void;
+  variablesTitle?: string;
+  subflowOwnerPath?: string;
 };
 
 export function PropertiesPanel({
@@ -63,6 +71,13 @@ export function PropertiesPanel({
   onChange,
   onPropertyCommit,
   onDelete,
+  embeddedSubflowIds = [],
+  onEditSubflow,
+  subflowContext = null,
+  onRenameSubflow,
+  onDeleteSubflow,
+  variablesTitle = "Project variables",
+  subflowOwnerPath = "",
 }: Props) {
   const readOnly = !editing;
   const outputNameBeforeEdit = useRef("");
@@ -79,7 +94,43 @@ export function PropertiesPanel({
   if (!node) {
     return (
       <div className="panel properties">
-        <h3>Project variables</h3>
+        {subflowContext && onRenameSubflow && onDeleteSubflow ? (
+          <SubflowManagePanel
+            subflowId={subflowContext.id}
+            ownerPath={subflowContext.ownerPath}
+            readOnly={readOnly}
+            existingSubflowIds={embeddedSubflowIds}
+            onRename={(newId) => onRenameSubflow(subflowContext.id, newId)}
+            onDelete={() => onDeleteSubflow(subflowContext.id)}
+          />
+        ) : null}
+        {!subflowContext && embeddedSubflowIds.length > 0 && onRenameSubflow && onDeleteSubflow ? (
+          <>
+            <h3>Embedded subflows</h3>
+            <ul className="subflow-manage-list">
+              {embeddedSubflowIds.map((id) => (
+                <li key={id}>
+                  <SubflowManagePanel
+                    compact
+                    subflowId={id}
+                    ownerPath={subflowOwnerPath}
+                    readOnly={readOnly}
+                    existingSubflowIds={embeddedSubflowIds}
+                    onOpen={onEditSubflow ? () => onEditSubflow(id) : undefined}
+                    onRename={(newId) => onRenameSubflow(id, newId)}
+                    onDelete={() => onDeleteSubflow(id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+        <h3>{variablesTitle}</h3>
+        {subflowContext ? (
+          <p className="hint">Seeds and defaults for this subflow only (saved under subflows in JSON).</p>
+        ) : (
+          <p className="hint">Initial run variables for this flow file (entry orchestrator uses flow.json).</p>
+        )}
         <FlowVariablesOverview nodes={flowNodes} onSelectNode={onSelectFlowNode} />
         <ProjectVariablesPanel
           variables={variables}
@@ -164,6 +215,12 @@ export function PropertiesPanel({
 
   return (
     <div className="panel properties">
+      {subflowContext ? (
+        <p className="hint subflow-context-banner">
+          Subflow <strong>{subflowContext.id}</strong> — seeds live under{" "}
+          <code>subflows.{subflowContext.id}.variables</code>.
+        </p>
+      ) : null}
       <h3>Properties</h3>
       <label>
         Id
@@ -402,6 +459,7 @@ export function PropertiesPanel({
               <option value="decrease_variable">DecreaseVariable</option>
               <option value="show_message">ShowMessage</option>
               <option value="show_get_user_input">ShowGetUserInput</option>
+              <option value="run_flow">RunFlow</option>
             </select>
           </label>
           <p className="hint">Current: {actionLabel(node.action)}</p>
@@ -1100,6 +1158,196 @@ export function PropertiesPanel({
                   onBlur={commitDraft}
                 />
               </label>
+            </>
+          )}
+
+          {node.action.type === "run_flow" && (
+            <>
+              <label>
+                Flow id (manifest.flows)
+                <input
+                  value={node.action.flow_id ?? ""}
+                  disabled={readOnly}
+                  placeholder="login-eproc"
+                  onChange={(e) =>
+                    patchActionDraft({
+                      type: "run_flow",
+                      flow_id: e.target.value || undefined,
+                      path: node.action!.type === "run_flow" ? node.action.path : undefined,
+                      inputs: node.action!.type === "run_flow" ? node.action.inputs : undefined,
+                      outputs: node.action!.type === "run_flow" ? node.action.outputs : undefined,
+                      share_browser:
+                        node.action!.type === "run_flow" ? node.action.share_browser : true,
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+              </label>
+              <label>
+                Path (relative to project, if no flow id)
+                <input
+                  value={node.action.path ?? ""}
+                  disabled={readOnly}
+                  placeholder="flows/login.json"
+                  onChange={(e) => {
+                    const cur = node.action;
+                    if (cur?.type !== "run_flow") return;
+                    patchActionDraft({
+                      type: "run_flow",
+                      flow_id: cur.flow_id,
+                      path: e.target.value || undefined,
+                      inputs: cur.inputs,
+                      outputs: cur.outputs,
+                      share_browser: cur.share_browser,
+                    });
+                  }}
+                  onBlur={commitDraft}
+                />
+              </label>
+              <label>
+                Variable scope
+                <select
+                  value={node.action.variable_scope ?? "inherit"}
+                  disabled={readOnly}
+                  onChange={(e) => {
+                    const cur = node.action;
+                    if (cur?.type !== "run_flow") return;
+                    patchActionDraft({
+                      type: "run_flow",
+                      flow_id: cur.flow_id,
+                      path: cur.path,
+                      inputs: cur.inputs,
+                      outputs: cur.outputs,
+                      share_browser: cur.share_browser,
+                      variable_scope: e.target.value as "inherit" | "isolated",
+                    });
+                  }}
+                  onBlur={commitDraft}
+                >
+                  <option value="inherit">Inherit (shared run variables)</option>
+                  <option value="isolated">Isolated (outputs only)</option>
+                </select>
+              </label>
+              <label>
+                Share browser session
+                <select
+                  value={node.action.share_browser === false ? "false" : "true"}
+                  disabled={readOnly}
+                  onChange={(e) => {
+                    const cur = node.action;
+                    if (cur?.type !== "run_flow") return;
+                    patchActionDraft({
+                      type: "run_flow",
+                      flow_id: cur.flow_id,
+                      path: cur.path,
+                      inputs: cur.inputs,
+                      outputs: cur.outputs,
+                      variable_scope: cur.variable_scope,
+                      share_browser: e.target.value === "true",
+                    });
+                  }}
+                  onBlur={commitDraft}
+                >
+                  <option value="true">Yes (default)</option>
+                  <option value="false">No (separate browser)</option>
+                </select>
+              </label>
+              <label>
+                Inputs (one per line: var=template)
+                <textarea
+                  rows={4}
+                  disabled={readOnly}
+                  value={Object.entries(node.action.inputs ?? {})
+                    .map(([k, v]) => `${k}=${v}`)
+                    .join("\n")}
+                  placeholder={"name={usuario}\nseed=static"}
+                  onChange={(e) => {
+                    const cur = node.action;
+                    if (cur?.type !== "run_flow") return;
+                    const inputs: Record<string, string> = {};
+                    for (const line of e.target.value.split("\n")) {
+                      const trimmed = line.trim();
+                      if (!trimmed) continue;
+                      const eq = trimmed.indexOf("=");
+                      if (eq <= 0) continue;
+                      const key = trimmed.slice(0, eq).trim();
+                      const val = trimmed.slice(eq + 1).trim();
+                      if (key) inputs[key] = val;
+                    }
+                    patchActionDraft({
+                      type: "run_flow",
+                      flow_id: cur.flow_id,
+                      path: cur.path,
+                      inputs: Object.keys(inputs).length > 0 ? inputs : undefined,
+                      outputs: cur.outputs,
+                      share_browser: cur.share_browser,
+                      variable_scope: cur.variable_scope,
+                    });
+                  }}
+                  onBlur={commitDraft}
+                />
+              </label>
+              <label>
+                Outputs (comma-separated variable names for logs)
+                <input
+                  value={(node.action.outputs ?? []).join(", ")}
+                  disabled={readOnly}
+                  placeholder="sessao_ok, protocolo"
+                  onChange={(e) => {
+                    const cur = node.action;
+                    if (cur?.type !== "run_flow") return;
+                    const outputs = e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                    patchActionDraft({
+                      type: "run_flow",
+                      flow_id: cur.flow_id,
+                      path: cur.path,
+                      inputs: cur.inputs,
+                      outputs: outputs.length > 0 ? outputs : undefined,
+                      share_browser: cur.share_browser,
+                    });
+                  }}
+                  onBlur={commitDraft}
+                />
+              </label>
+              {embeddedSubflowIds.length > 0 ? (
+                <label>
+                  Embedded subflows (this file)
+                  <ul className="flow-var-list">
+                    {embeddedSubflowIds.map((id) => (
+                      <li key={id}>
+                        <button
+                          type="button"
+                          className="link-button"
+                          disabled={readOnly || !onEditSubflow}
+                          onClick={() => onEditSubflow?.(id)}
+                        >
+                          Open ⎇ {id}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </label>
+              ) : null}
+              {node.action.type === "run_flow" &&
+              node.action.flow_id &&
+              embeddedSubflowIds.includes(node.action.flow_id) ? (
+                <button
+                  type="button"
+                  disabled={readOnly || !onEditSubflow}
+                  onClick={() => {
+                    const id = node.action?.type === "run_flow" ? node.action.flow_id : undefined;
+                    if (id) onEditSubflow?.(id);
+                  }}
+                >
+                  Edit subflow “{node.action.flow_id}”
+                </button>
+              ) : null}
+              <p className="hint">
+                Use flow id for manifest.flows or embedded subflows; path for external JSON files.
+              </p>
             </>
           )}
 

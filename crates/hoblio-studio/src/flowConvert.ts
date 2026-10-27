@@ -33,12 +33,19 @@ function defaultSourceHandle(
   return MAIN_SOURCE_HANDLE;
 }
 
+/** Layout for nodes that have no persisted `ui` (avoids stacking at 0,0). */
+export function autoLayoutPosition(index: number): { x: number; y: number } {
+  const col = index % 4;
+  const row = Math.floor(index / 4);
+  return { x: 80 + col * 220, y: 120 + row * 140 };
+}
+
 export function graphToFlow(graph: FlowGraph): { nodes: Node<HoblioNodeData>[]; edges: HoblioFlowEdge[] } {
   const nodesById = new Map(graph.nodes.map((n) => [n.id, n]));
-  const nodes: Node<HoblioNodeData>[] = graph.nodes.map((n) => ({
+  const nodes: Node<HoblioNodeData>[] = graph.nodes.map((n, index) => ({
     id: n.id,
     type: "hoblio",
-    position: { x: n.ui?.x ?? 0, y: n.ui?.y ?? 0 },
+    position: n.ui ? { x: n.ui.x, y: n.ui.y } : autoLayoutPosition(index),
     data: { flowNode: n },
   }));
   const edges: HoblioFlowEdge[] = graph.edges.map((e, i) => {
@@ -69,11 +76,19 @@ export function flowToGraph(
   start: string,
 ): FlowGraph {
   const nodesById = new Map(nodes.map((n) => [n.id, n.data.flowNode]));
-  const flowNodes: FlowNode[] = nodes.map((n) => {
+  const flowNodes: FlowNode[] = nodes.map((n, index) => {
     const base = n.data.flowNode;
+    const auto = autoLayoutPosition(index);
+    const movedFromAuto =
+      base.ui == null &&
+      (n.position.x !== auto.x || n.position.y !== auto.y);
+    const ui =
+      base.ui != null || movedFromAuto
+        ? { x: n.position.x, y: n.position.y }
+        : undefined;
     return {
       ...base,
-      ui: { x: n.position.x, y: n.position.y },
+      ui,
     };
   });
   const flowEdges: FlowEdge[] = edges.map((e) => {

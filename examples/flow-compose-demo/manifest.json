@@ -1,0 +1,17 @@
+{
+  "name": "flow-compose-demo",
+  "version": "0.1.0",
+  "description": "Orchestrator calling child flows via run_flow",
+  "entry_flow": "flow.json",
+  "flows": {
+    "greet": {
+      "path": "flows/greet.json",
+      "inputs": ["name"],
+      "outputs": ["greeting"]
+    },
+    "finish": {
+      "path": "flows/finish.json",
+      "outputs": ["done_flag"]
+    }
+  }
+}

@@ -1,5 +1,7 @@
 //! Load and save Hoblio project folders (`manifest.json`, `flow.json`, optional `assets/`).
 
+mod composition;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -10,6 +12,12 @@ use serde_json::Value;
 pub const MANIFEST_FILE: &str = "manifest.json";
 pub const FLOW_FILE: &str = "flow.json";
 pub const ASSETS_DIR: &str = "assets";
+
+pub use composition::{
+    LoadedFlowFile, ProjectFlowEntry, ResolvedChildFlow, MAX_RUN_FLOW_DEPTH, list_project_flows,
+    load_flow_cached, load_flow_file, resolve_child_flow, resolve_project_flow_path,
+    resolve_run_flow_path, save_flow_document, validate_project_composition,
+};
 
 #[derive(Debug, Clone)]
 pub struct ProjectLayout {
@@ -93,8 +101,11 @@ fn write_flow(path: &Path, flow: &FlowGraph, variables: &ProjectVariables) -> Re
 }
 
 pub fn validate_project_dir(dir: impl AsRef<Path>) -> Result<()> {
+    let dir = dir.as_ref();
     let project = load_project(dir)?;
-    validate_project(&project).map_err(|e| anyhow::anyhow!(e))
+    validate_project(&project).map_err(|e| anyhow::anyhow!(e))?;
+    validate_project_composition(dir, &project).map_err(|e| anyhow::anyhow!(e))?;
+    Ok(())
 }
 
 fn write_json_if_changed(path: &Path, value: &impl serde::Serialize) -> Result<()> {

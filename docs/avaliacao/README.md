@@ -7,8 +7,13 @@
 | [protocolos/eval-grok-flow-control.md](protocolos/eval-grok-flow-control.md) | `scripts/eval-flow-control.ps1` | **24 PASS**, 0 FAIL |
 | [protocolos/eval-grok-rpa-abc.md](protocolos/eval-grok-rpa-abc.md) | `scripts/eval-rpa-abc.ps1` | **27 PASS**, 0 FAIL |
 | [protocolos/eval-grok-retest-priorities.md](protocolos/eval-grok-retest-priorities.md) | Reteste Studio (slice 5) | Checklist manual |
+| [protocolos/eval-grok-flow-compose.md](protocolos/eval-grok-flow-compose.md) | `scripts/eval-flow-compose.ps1` | **19 PASS**, 0 FAIL |
 
-Rodar **flow-control** e **rpa-abc** antes de release local. Detalhes de build Studio (T-F01): `npm run build` em `crates/hoblio-studio` — commitar `dist/index.html` quando o hash do bundle mudar (ver [guia-construcao.md §4.7](../guia-construcao.md)).
+Rodar **flow-control**, **rpa-abc** e **flow-compose** antes de release local.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/eval-flow-compose.ps1
+``` Detalhes de build Studio (T-F01): `npm run build` em `crates/hoblio-studio` — commitar `dist/index.html` quando o hash do bundle mudar (ver [guia-construcao.md §4.7](../guia-construcao.md)).
 
 ## Relatórios arquivados
 

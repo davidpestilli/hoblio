@@ -7,6 +7,7 @@ edition.workspace = true
 anyhow = { workspace = true }
 hoblio-log = { path = "../hoblio-log" }
 hoblio-model = { path = "../hoblio-model" }
+hoblio-serde = { path = "../hoblio-serde" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

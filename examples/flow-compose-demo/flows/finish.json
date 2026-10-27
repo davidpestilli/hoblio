@@ -1,0 +1,22 @@
+{
+  "start": "start",
+  "nodes": [
+    { "id": "start", "kind": "start", "label": "Start", "ui": { "x": 80, "y": 120 } },
+    {
+      "id": "set_done",
+      "kind": "action",
+      "label": "Set done",
+      "ui": { "x": 300, "y": 120 },
+      "action": {
+        "type": "set_variable",
+        "variable": "done_flag",
+        "value": "yes"
+      }
+    },
+    { "id": "end", "kind": "end", "label": "End", "ui": { "x": 520, "y": 120 } }
+  ],
+  "edges": [
+    { "from": "start", "to": "set_done" },
+    { "from": "set_done", "to": "end" }
+  ]
+}

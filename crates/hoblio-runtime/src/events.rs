@@ -6,8 +6,25 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum RunEvent {
     RunStarted { project: String },
-    NodeEnter { node_id: String },
-    NodeExit { node_id: String },
+    FlowStarted {
+        flow_ref: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        parent_node_id: Option<String>,
+    },
+    FlowFinished {
+        flow_ref: String,
+        end_node_id: String,
+    },
+    NodeEnter {
+        node_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        flow_ref: Option<String>,
+    },
+    NodeExit {
+        node_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        flow_ref: Option<String>,
+    },
     ActionExecuted {
         node_id: String,
         summary: String,

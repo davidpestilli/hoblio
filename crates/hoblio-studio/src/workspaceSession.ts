@@ -6,6 +6,9 @@ export type WorkspaceSession = {
   project: FlowProject;
   projectDir: string | null;
   savedDigest: string;
+  /** File path or subflow editor key (`flow.json#subflow:id`). */
+  activeFlowPath?: string;
+  activeEditorKey?: string;
 };
 
 export function readWorkspaceSession(): WorkspaceSession | null {

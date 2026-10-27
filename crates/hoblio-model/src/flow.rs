@@ -1,8 +1,11 @@
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::action::{ActionKind, NodeKind};
 use crate::control::{ControlKind, EdgePort};
 use crate::error_handling::ErrorHandling;
+use crate::subflow::SubflowBundle;
 
 pub type NodeId = String;
 
@@ -12,6 +15,9 @@ pub struct FlowGraph {
     pub start: NodeId,
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,
+    /// Named subflows callable via `run_flow.flow_id` before manifest registry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subflows: Option<BTreeMap<String, SubflowBundle>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

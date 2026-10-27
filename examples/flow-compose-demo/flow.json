@@ -1,0 +1,62 @@
+{
+  "start": "start",
+  "variables": {
+    "name": "Hoblio"
+  },
+  "nodes": [
+    { "id": "start", "kind": "start", "label": "Start", "ui": { "x": 80, "y": 120 } },
+    {
+      "id": "run_greet",
+      "kind": "action",
+      "label": "Run greet",
+      "ui": { "x": 300, "y": 120 },
+      "action": {
+        "type": "run_flow",
+        "flow_id": "greet",
+        "inputs": {
+          "name": "{name}"
+        },
+        "outputs": ["greeting"]
+      }
+    },
+    {
+      "id": "log_greeting",
+      "kind": "action",
+      "label": "Log greeting",
+      "ui": { "x": 520, "y": 120 },
+      "action": {
+        "type": "log",
+        "message": "From child: {greeting}"
+      }
+    },
+    {
+      "id": "run_finish",
+      "kind": "action",
+      "label": "Run finish",
+      "ui": { "x": 740, "y": 120 },
+      "action": {
+        "type": "run_flow",
+        "flow_id": "finish",
+        "outputs": ["done_flag"]
+      }
+    },
+    {
+      "id": "log_done",
+      "kind": "action",
+      "label": "Log done",
+      "ui": { "x": 960, "y": 120 },
+      "action": {
+        "type": "log",
+        "message": "Done flag: {done_flag}"
+      }
+    },
+    { "id": "end", "kind": "end", "label": "End", "ui": { "x": 1180, "y": 120 } }
+  ],
+  "edges": [
+    { "from": "start", "to": "run_greet" },
+    { "from": "run_greet", "to": "log_greeting" },
+    { "from": "log_greeting", "to": "run_finish" },
+    { "from": "run_finish", "to": "log_done" },
+    { "from": "log_done", "to": "end" }
+  ]
+}

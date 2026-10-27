@@ -1,4 +1,17 @@
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
+
+/// How child flow variables merge back into the parent run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum RunFlowVariableScope {
+    /// Child sees and updates the parent run map (default).
+    #[default]
+    Inherit,
+    /// Child starts from inputs/seeds; only `outputs` return to the parent.
+    Isolated,
+}
 
 /// Text field layout for [`ActionKind::ShowGetUserInput`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -130,6 +143,27 @@ pub enum ActionKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         amount: Option<String>,
     },
+    /// Run another flow file in-process (shared browser session and run variables).
+    RunFlow {
+        /// Key in `manifest.flows` (preferred when registered).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        flow_id: Option<String>,
+        /// Path relative to project root (e.g. `flows/login.json`).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        path: Option<String>,
+        /// Optional input bindings: child variable name → interpolated value template.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        inputs: Option<BTreeMap<String, String>>,
+        /// With `inherit`, child variables merge into the parent run. With `isolated`, only these
+        /// names are copied back (none when omitted or empty).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        outputs: Option<Vec<String>>,
+        /// When true (default), reuse the current browser session.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        share_browser: Option<bool>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        variable_scope: Option<RunFlowVariableScope>,
+    },
 }
 
 impl ActionKind {
@@ -155,7 +189,28 @@ impl ActionKind {
                 .into_iter()
                 .filter(|v| !v.is_empty())
                 .collect(),
+            ActionKind::RunFlow { outputs, .. } => outputs
+                .as_ref()
+                .map(|names| {
+                    names
+                        .iter()
+                        .map(String::as_str)
+                        .filter(|v| !v.is_empty())
+                        .collect()
+                })
+                .unwrap_or_default(),
             _ => vec![],
+        }
+    }
+
+    pub fn run_flow_target(&self) -> Option<(&str, Option<&str>)> {
+        let ActionKind::RunFlow { flow_id, path, .. } = self else {
+            return None;
+        };
+        match (flow_id.as_deref(), path.as_deref()) {
+            (Some(id), _) if !id.is_empty() => Some((id, path.as_deref())),
+            (_, Some(p)) if !p.is_empty() => Some((p, None)),
+            _ => None,
         }
     }
 }
@@ -271,6 +326,22 @@ mod tests {
             back.produced_variables(),
             vec!["UserInput", "ButtonPressed"]
         );
+    }
+
+    #[test]
+    fn run_flow_roundtrip() {
+        let action = ActionKind::RunFlow {
+            flow_id: Some("login".into()),
+            path: None,
+            inputs: None,
+            outputs: Some(vec!["sessao_ok".into()]),
+            share_browser: Some(true),
+            variable_scope: None,
+        };
+        let json = serde_json::to_string(&action).unwrap();
+        assert!(json.contains("run_flow"));
+        let back: ActionKind = serde_json::from_str(&json).unwrap();
+        assert_eq!(action, back);
     }
 
     #[test]

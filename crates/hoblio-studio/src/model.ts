@@ -54,7 +54,7 @@ export type ActionKind =
   | { type: "delay"; milliseconds: number }
   | { type: "http_get"; url: string }
   | { type: "show_message"; title: string; text: string; timeout_seconds?: number }
-  | {
+    | {
       type: "show_get_user_input";
       title: string;
       message: string;
@@ -63,6 +63,15 @@ export type ActionKind =
       topmost?: boolean;
       user_input_variable: string;
       button_pressed_variable: string;
+    }
+  | {
+      type: "run_flow";
+      flow_id?: string;
+      path?: string;
+      inputs?: Record<string, string>;
+      outputs?: string[];
+      share_browser?: boolean;
+      variable_scope?: "inherit" | "isolated";
     };
 
 export type DefaultActionOptions = {
@@ -105,16 +114,33 @@ export interface FlowEdge {
   };
 }
 
+export type SubflowBundle = {
+  start: string;
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  variables?: Record<string, unknown>;
+};
+
 export interface FlowGraph {
   start: string;
   nodes: FlowNode[];
   edges: FlowEdge[];
+  subflows?: Record<string, SubflowBundle>;
+}
+
+export interface FlowManifestEntry {
+  path: string;
+  description?: string;
+  inputs?: string[];
+  outputs?: string[];
 }
 
 export interface FlowManifest {
   name: string;
   version: string;
   description?: string;
+  entry_flow?: string;
+  flows?: Record<string, FlowManifestEntry>;
 }
 
 export interface FlowProject {
@@ -182,6 +208,8 @@ export function actionLabel(action: ActionKind): string {
       return "ShowMessage";
     case "show_get_user_input":
       return "ShowGetUserInput";
+    case "run_flow":
+      return "RunFlow";
   }
 }
 
@@ -304,6 +332,14 @@ export function defaultAction(
         button_pressed_variable,
       };
     }
+    case "run_flow":
+      return {
+        type: "run_flow",
+        flow_id: "child-flow",
+        share_browser: true,
+        variable_scope: "inherit",
+        outputs: ["result"],
+      };
   }
 }
 

@@ -1,0 +1,25 @@
+{
+  "start": "start",
+  "variables": {
+    "name": "world"
+  },
+  "nodes": [
+    { "id": "start", "kind": "start", "label": "Start", "ui": { "x": 80, "y": 120 } },
+    {
+      "id": "set_greeting",
+      "kind": "action",
+      "label": "Set greeting",
+      "ui": { "x": 300, "y": 120 },
+      "action": {
+        "type": "set_variable",
+        "variable": "greeting",
+        "value": "Hello, {name}!"
+      }
+    },
+    { "id": "end", "kind": "end", "label": "End", "ui": { "x": 520, "y": 120 } }
+  ],
+  "edges": [
+    { "from": "start", "to": "set_greeting" },
+    { "from": "set_greeting", "to": "end" }
+  ]
+}

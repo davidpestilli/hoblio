@@ -4,15 +4,21 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 use hoblio_log::runtime_event;
 use hoblio_model::{
-    ControlKind, EdgePort, ErrorHandling, FlowProject, NodeKind, validate_project,
+    ActionKind, ControlKind, EdgePort, ErrorHandling, FlowGraph, FlowProject, NodeKind,
+    RunFlowVariableScope, validate_project,
 };
+use hoblio_serde::LoadedFlowFile;
 
 use crate::actions::{execute_action, snapshot_action_variables};
+use crate::run_flow::{
+    apply_inherit_run_flow_inputs, apply_isolated_run_flow_inputs, child_browser_for_action,
+    merge_isolated_outputs, prepare_child_flow, run_flow_summary, shutdown_optional_browser,
+};
 use crate::cancel::{reset_run_cancel, run_cancel_requested};
 use crate::browser::BrowserContext;
 use crate::events::{RunEvent, RunOutcome};
 use crate::expr::{eval_if, list_from_vars, parse_number, resolve_operand};
-use crate::variables::seed_from_project;
+use crate::variables::{RunVariables, seed_from_project};
 
 type RouteKey = (String, EdgePort);
 
@@ -69,6 +75,10 @@ where
     F: FnMut(RunEvent),
 {
     validate_project(project).map_err(|e| anyhow::anyhow!(e))?;
+    if let Some(root) = project_root {
+        hoblio_serde::validate_project_composition(root, project)
+            .map_err(|e| anyhow::anyhow!(e))?;
+    }
     reset_run_cancel();
 
     let mut browser = BrowserContext::new()?;
@@ -141,27 +151,72 @@ where
     });
     runtime_event("run_started", "", &project.manifest.name);
 
-    let nodes: HashMap<_, _> = project
-        .flow
-        .nodes
-        .iter()
-        .map(|n| (n.id.as_str(), n))
-        .collect();
-
-    let routes = build_routes(&project.flow.edges);
     let mut run_vars = seed_from_project(&project.variables);
     let mut loop_frames: Vec<LoopFrame> = Vec::new();
-
-    let mut current = project.flow.start.clone();
+    let mut flow_cache: HashMap<String, LoadedFlowFile> = HashMap::new();
     let mut visits = 0usize;
+
+    let root = project_root.unwrap_or_else(|| Path::new("."));
+
+    let last_node = run_graph(
+        &project.flow,
+        "flow.json",
+        0,
+        &project.manifest,
+        root,
+        browser,
+        &mut run_vars,
+        &mut loop_frames,
+        &mut flow_cache,
+        &mut visits,
+        &mut events,
+        on_event,
+    )?;
+
+    let finished = RunEvent::RunFinished {
+        last_node: last_node.clone(),
+    };
+    events.push(finished.clone());
+    on_event(finished);
+    runtime_event("run_finished", &last_node, "end");
+
+    Ok(RunOutcome {
+        events,
+        last_node_id: last_node,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_graph<F>(
+    graph: &FlowGraph,
+    flow_ref: &str,
+    depth: usize,
+    manifest: &hoblio_model::FlowManifest,
+    project_root: &Path,
+    browser: &BrowserContext,
+    run_vars: &mut crate::variables::RunVariables,
+    loop_frames: &mut Vec<LoopFrame>,
+    flow_cache: &mut HashMap<String, LoadedFlowFile>,
+    visits: &mut usize,
+    events: &mut Vec<RunEvent>,
+    on_event: &mut F,
+) -> Result<String>
+where
+    F: FnMut(RunEvent),
+{
+    let nodes: HashMap<_, _> = graph.nodes.iter().map(|n| (n.id.as_str(), n)).collect();
+    let routes = build_routes(&graph.edges);
+    let flow_ref_owned = flow_ref.to_string();
+
+    let mut current = graph.start.clone();
 
     loop {
         if run_cancel_requested() {
             bail!("run cancelled by user");
         }
 
-        visits += 1;
-        if visits > MAX_NODE_VISITS {
+        *visits += 1;
+        if *visits > MAX_NODE_VISITS {
             bail!(
                 "execution exceeded {MAX_NODE_VISITS} node visits (possible infinite loop)"
             );
@@ -173,6 +228,7 @@ where
 
         let enter = RunEvent::NodeEnter {
             node_id: node.id.clone(),
+            flow_ref: Some(flow_ref_owned.clone()),
         };
         events.push(enter.clone());
         on_event(enter);
@@ -185,33 +241,118 @@ where
             NodeKind::End => {
                 let exit = RunEvent::NodeExit {
                     node_id: node.id.clone(),
+                    flow_ref: Some(flow_ref_owned.clone()),
                 };
                 events.push(exit.clone());
                 on_event(exit);
-                let finished = RunEvent::RunFinished {
-                    last_node: node.id.clone(),
-                };
-                events.push(finished.clone());
-                on_event(finished);
-                runtime_event("run_finished", &node.id, "end");
-                return Ok(RunOutcome {
-                    events,
-                    last_node_id: node.id.clone(),
-                });
+                return Ok(node.id.clone());
             }
             NodeKind::Action => {
                 let action = node
                     .action
                     .as_ref()
                     .context("action node without action")?;
-                let summary = execute_action_with_policy(
-                    action,
-                    node.error_handling.as_ref(),
-                    browser,
-                    &mut run_vars,
-                    project_root,
-                )?;
-                let variables = snapshot_action_variables(action, &run_vars);
+                let summary = if matches!(action, ActionKind::RunFlow { .. }) {
+                    let ActionKind::RunFlow {
+                        inputs,
+                        outputs,
+                        variable_scope,
+                        ..
+                    } = action
+                    else {
+                        unreachable!()
+                    };
+                    let scope = variable_scope.unwrap_or(RunFlowVariableScope::Inherit);
+                    let resolved =
+                        prepare_child_flow(project_root, manifest, graph, action, depth, flow_cache)?;
+                    let child_label = match action {
+                        ActionKind::RunFlow { flow_id, .. } => flow_id
+                            .as_deref()
+                            .filter(|s| !s.is_empty())
+                            .map(String::from)
+                            .unwrap_or_else(|| resolved.label()),
+                        _ => resolved.label(),
+                    };
+                    let optional_browser = child_browser_for_action(action)?;
+                    let browser_ref = optional_browser.as_ref().unwrap_or(browser);
+                    let started = RunEvent::FlowStarted {
+                        flow_ref: child_label.clone(),
+                        parent_node_id: Some(node.id.clone()),
+                    };
+                    events.push(started.clone());
+                    on_event(started);
+                    let end_node = match scope {
+                        RunFlowVariableScope::Inherit => {
+                            apply_inherit_run_flow_inputs(
+                                inputs.as_ref(),
+                                resolved.variables(),
+                                run_vars,
+                            )?;
+                            run_graph(
+                                resolved.graph(),
+                                &child_label,
+                                depth + 1,
+                                manifest,
+                                project_root,
+                                browser_ref,
+                                run_vars,
+                                loop_frames,
+                                flow_cache,
+                                visits,
+                                events,
+                                on_event,
+                            )?
+                        }
+                        RunFlowVariableScope::Isolated => {
+                            let parent_snapshot = run_vars.clone();
+                            let mut child_vars = RunVariables::new();
+                            apply_isolated_run_flow_inputs(
+                                inputs.as_ref(),
+                                resolved.variables(),
+                                run_vars,
+                                &mut child_vars,
+                            )?;
+                            let end = run_graph(
+                                resolved.graph(),
+                                &child_label,
+                                depth + 1,
+                                manifest,
+                                project_root,
+                                browser_ref,
+                                &mut child_vars,
+                                loop_frames,
+                                flow_cache,
+                                visits,
+                                events,
+                                on_event,
+                            )?;
+                            merge_isolated_outputs(
+                                run_vars,
+                                parent_snapshot,
+                                &child_vars,
+                                outputs.as_ref(),
+                            );
+                            end
+                        }
+                    };
+                    shutdown_optional_browser(optional_browser);
+                    let finished = RunEvent::FlowFinished {
+                        flow_ref: child_label.clone(),
+                        end_node_id: end_node.clone(),
+                    };
+                    events.push(finished.clone());
+                    on_event(finished);
+                    run_flow_summary(&child_label, &end_node, outputs.as_ref(), run_vars)
+                } else {
+                    execute_action_with_policy(
+                        action,
+                        node.error_handling.as_ref(),
+                        browser,
+                        run_vars,
+                        Some(project_root),
+                    )?
+                };
+                let variables = snapshot_action_variables(action, run_vars);
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary: summary.clone(),
@@ -489,6 +630,7 @@ where
 
         let exit = RunEvent::NodeExit {
             node_id: node.id.clone(),
+            flow_ref: Some(flow_ref_owned.clone()),
         };
         events.push(exit.clone());
         on_event(exit);
@@ -496,11 +638,7 @@ where
         current = if let Some(next) = routed {
             next
         } else {
-            match route_to(&routes, &current, EdgePort::Main) {
-                Ok(next) => next,
-                Err(_) if node.kind == NodeKind::End => unreachable!(),
-                Err(e) => return Err(e),
-            }
+            route_to(&routes, &current, EdgePort::Main)?
         };
     }
 }
@@ -584,6 +722,83 @@ mod tests {
         assert!(text.contains("item=alpha"));
         assert!(text.contains("item=beta"));
         let _ = std::fs::remove_file(&report_path);
+    }
+
+    #[test]
+    fn flow_compose_isolated_demo_runs() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/flow-compose-isolated");
+        let project = load_project(&path).expect("demo project");
+        let outcome = run_project_with_listener(&project, Some(path.as_path()), |_| {})
+            .expect("run");
+        let logs: Vec<_> = outcome
+            .events
+            .iter()
+            .filter_map(|e| {
+                if let RunEvent::ActionExecuted { summary, .. } = e {
+                    Some(summary.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert!(logs.iter().any(|s| s.contains("result=ok-from-parent")));
+        let parent_log = logs
+            .iter()
+            .find(|s| s.contains("parent_marker="))
+            .expect("parent log line");
+        assert!(parent_log.contains("parent_marker=visible"));
+        assert!(!parent_log.contains("leak-me-not"));
+    }
+
+    #[test]
+    fn flow_compose_subflow_demo_runs() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/flow-compose-subflow");
+        let project = load_project(&path).expect("demo project");
+        let outcome = run_project_with_listener(&project, Some(path.as_path()), |_| {})
+            .expect("run");
+        let logs: Vec<_> = outcome
+            .events
+            .iter()
+            .filter_map(|e| {
+                if let RunEvent::ActionExecuted { summary, .. } = e {
+                    Some(summary.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert!(logs.iter().any(|s| s.contains("Message: Hi Embedded (inline)")));
+    }
+
+    #[test]
+    fn flow_compose_demo_runs() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/flow-compose-demo");
+        let project = load_project(&path).expect("demo project");
+        let outcome = run_project_with_listener(&project, Some(path.as_path()), |_| {})
+            .expect("run");
+        assert_eq!(outcome.last_node_id, "end");
+        let logs: Vec<_> = outcome
+            .events
+            .iter()
+            .filter_map(|e| {
+                if let RunEvent::ActionExecuted { summary, .. } = e {
+                    Some(summary.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert!(logs.iter().any(|s| s.contains("From child: Hello, Hoblio!")));
+        assert!(logs.iter().any(|s| s.contains("Done flag: yes")));
+        assert!(
+            outcome
+                .events
+                .iter()
+                .any(|e| matches!(e, RunEvent::FlowStarted { flow_ref, .. } if flow_ref == "greet"))
+        );
     }
 
     #[test]
