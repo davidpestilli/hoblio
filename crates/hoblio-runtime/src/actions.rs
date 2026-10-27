@@ -10,7 +10,7 @@ use crate::browser::BrowserContext;
 use crate::files::{file_append, file_read_into_variable, file_write};
 use crate::lists::{list_append, list_clear};
 use crate::show_get_user_input::run_show_get_user_input;
-use crate::show_message::spawn_show_message;
+use crate::show_message::run_show_message;
 use crate::variables::{RunVariables, interpolate};
 
 pub fn execute_action(
@@ -167,7 +167,7 @@ fn show_message(
 ) -> Result<String> {
     let title = interpolate(title, vars)?;
     let text = interpolate(text, vars)?;
-    spawn_show_message(&title, &text, timeout_seconds)?;
+    run_show_message(&title, &text, timeout_seconds)?;
     let timeout_note = match timeout_seconds.filter(|&s| s > 0.0) {
         Some(s) => format!("timeout={s}s"),
         None => "until closed".into(),

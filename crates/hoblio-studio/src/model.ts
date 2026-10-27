@@ -331,6 +331,36 @@ export function patchBrowserNavigate(
   };
 }
 
+type BrowserDomActionType =
+  | "browser_click"
+  | "browser_fill"
+  | "browser_wait_for"
+  | "browser_get_text";
+
+function browserDomDefaults(
+  type: BrowserDomActionType,
+): { selector: string; timeout_ms?: number } {
+  switch (type) {
+    case "browser_fill":
+      return { selector: "input", timeout_ms: 10000 };
+    case "browser_wait_for":
+      return { selector: "h1", timeout_ms: 10000 };
+    case "browser_click":
+    case "browser_get_text":
+      return { selector: "h1", timeout_ms: undefined };
+  }
+}
+
+function browserDomBaseFields(
+  current: ActionKind,
+  type: BrowserDomActionType,
+): { selector: string; timeout_ms?: number } {
+  if (current.type === type) {
+    return { selector: current.selector, timeout_ms: current.timeout_ms };
+  }
+  return browserDomDefaults(type);
+}
+
 /** Shared fields for browser DOM actions (not navigate). */
 export function patchBrowserDomAction(
   current: ActionKind,
@@ -345,8 +375,17 @@ export function patchBrowserDomAction(
   },
   type: ActionKind["type"]
 ): ActionKind {
-  const timeout_ms = patch.timeout_ms;
-  const selector = patch.selector ?? "h1";
+  const domType = type as BrowserDomActionType;
+  const base =
+    type === "browser_click" ||
+    type === "browser_fill" ||
+    type === "browser_wait_for" ||
+    type === "browser_get_text"
+      ? browserDomBaseFields(current, domType)
+      : null;
+  const selector = patch.selector ?? base?.selector ?? "h1";
+  const timeout_ms =
+    patch.timeout_ms !== undefined ? patch.timeout_ms : base?.timeout_ms;
   switch (type) {
     case "browser_click":
       return {
@@ -364,7 +403,15 @@ export function patchBrowserDomAction(
           (current.type === "browser_click" ? current.wait_after_timeout_ms : undefined),
       };
     case "browser_wait_navigation":
-      return { type: "browser_wait_navigation", timeout_ms };
+      return {
+        type: "browser_wait_navigation",
+        timeout_ms:
+          patch.timeout_ms !== undefined
+            ? patch.timeout_ms
+            : current.type === "browser_wait_navigation"
+              ? current.timeout_ms
+              : undefined,
+      };
     case "browser_fill":
       return {
         type: "browser_fill",

@@ -1,11 +1,12 @@
-//! Non-blocking native message window (Windows).
+//! Blocking native message window (Windows). The flow waits until the user closes
+//! the dialog or the optional timeout elapses.
 
 use anyhow::Result;
 
-pub fn spawn_show_message(title: &str, text: &str, timeout_seconds: Option<f64>) -> Result<()> {
+pub fn run_show_message(title: &str, text: &str, timeout_seconds: Option<f64>) -> Result<()> {
     #[cfg(windows)]
     {
-        show_message_win::spawn(title, text, timeout_seconds)
+        show_message_win::run(title, text, timeout_seconds)
     }
     #[cfg(not(windows))]
     {
@@ -48,21 +49,13 @@ mod show_message_win {
         s.encode_utf16().chain(std::iter::once(0)).collect()
     }
 
-    pub fn spawn(title: &str, text: &str, timeout_seconds: Option<f64>) -> Result<()> {
+    pub fn run(title: &str, text: &str, timeout_seconds: Option<f64>) -> Result<()> {
         let params = DialogParams {
             title: to_wide(title),
             text: to_wide(text),
             timeout_secs: timeout_seconds.filter(|&s| s > 0.0),
         };
-        thread::Builder::new()
-            .name("hoblio-show-message".into())
-            .spawn(move || {
-                if let Err(e) = run_dialog(params) {
-                    eprintln!("show_message window error: {e:#}");
-                }
-            })
-            .context("spawn show_message thread")?;
-        Ok(())
+        run_dialog(params)
     }
 
     unsafe extern "system" fn wnd_proc(

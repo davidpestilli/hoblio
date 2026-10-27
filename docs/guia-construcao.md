@@ -206,6 +206,14 @@ Todas as variantes executáveis de `ActionKind` expostas no Studio estão em Uti
 
 Detalhes: [slice 4](mvp/fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEach](mvp/fase-mvp-slice5-flow-control.md).
 
+### Studio / runtime — correções (out/2026)
+
+| Peça | Mudança |
+|------|---------|
+| `model.ts` → `patchBrowserDomAction` | Patches parciais em ações DOM (`browser_fill`, `browser_click`, `browser_wait_for`, `browser_get_text`) **preservam** `selector` e `timeout_ms` ao editar outro campo no painel (ex.: preencher **Text** não apaga mais o **CSS selector**). |
+| `workspaceSession.ts` + `App.tsx` | Sessão de trabalho em `sessionStorage` (`hoblio-studio-workspace-v1`): grava ao ocultar aba (`visibilitychange`) ou `pagehide`; restaura projeto, pasta e digest de “salvo” na abertura — mitiga perda do diagrama quando o WebView/navegador recarrega (dev, aba descartada). Persiste também após Open / Save / Limpar fluxo. |
+| `hoblio-runtime` → `show_message.rs` | **`ShowMessage` bloqueante** (mesmo padrão de `show_get_user_input`): sem `timeout_seconds` o fluxo espera **Fechar** ou o X; com timer > 0 a janela fecha sozinha e só então a execução continua. API interna: `run_show_message` (substitui `spawn_show_message` em thread separada). |
+
 ### Variáveis no Studio (PAD-style)
 
 Dois papéis, como no Power Automate for desktop:
@@ -424,7 +432,7 @@ Interpolação `{variavel}`: seeds em **`flow.json` → `variables`**, valores e
 5. **`examples/`** — fluxo demo mínimo.
 6. **Teste** — unit em model/runtime; doc em `docs/mvp/fase-mvp-sliceN-….md` ou atualizar este guia.
 
-Ações **Windows-only** (ex.: `show_message`) devem falhar com erro claro em outros SOs.
+Ações **Windows-only** (ex.: `show_message`, `show_get_user_input`) devem falhar com erro claro em outros SOs. No Windows, diálogos modais Win32 **bloqueiam** a thread de execução do fluxo até o usuário fechar (ou até o timer de `show_message`, se configurado).
 
 ---
 

@@ -16,6 +16,7 @@ import { renameVariableInSeed } from "./flowVariables";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { RunLogPanel } from "./RunLogPanel";
 import { logLineFromEvent, type LogLine, type RunEvent } from "./runLog";
+import { readWorkspaceSession, writeWorkspaceSession } from "./workspaceSession";
 
 function formatError(e: unknown): string {
   if (typeof e === "string") return e;
@@ -45,9 +46,15 @@ function projectWithClearedFlow(base: FlowProject): FlowProject {
   };
 }
 
+const restoredWorkspace = readWorkspaceSession();
+
 export default function App() {
-  const [project, setProject] = useState<FlowProject>(() => defaultProject());
-  const [projectDir, setProjectDir] = useState<string | null>(null);
+  const [project, setProject] = useState<FlowProject>(
+    () => restoredWorkspace?.project ?? defaultProject(),
+  );
+  const [projectDir, setProjectDir] = useState<string | null>(
+    () => restoredWorkspace?.projectDir ?? null,
+  );
   const [status, setStatus] = useState("Ready");
   const [statusIsError, setStatusIsError] = useState(false);
   const [logLines, setLogLines] = useState<LogLine[]>([]);
@@ -59,11 +66,13 @@ export default function App() {
     Record<string, Record<string, string>>
   >({});
   const [variables, setVariables] = useState<Record<string, unknown>>(
-    () => defaultProject().variables,
+    () => restoredWorkspace?.project.variables ?? defaultProject().variables,
   );
 
   const saveProjectRef = useRef<() => void>(() => {});
-  const savedDigestRef = useRef(projectDigest(defaultProject()));
+  const savedDigestRef = useRef(
+    restoredWorkspace?.savedDigest ?? projectDigest(restoredWorkspace?.project ?? defaultProject()),
+  );
   const [logHeight, setLogHeight] = useState(140);
 
   const editor = useFlowEditor(project, {
@@ -78,6 +87,52 @@ export default function App() {
       variables,
     };
   }, [editor, project, variables]);
+
+  const persistWorkspace = useCallback(() => {
+    try {
+      const current = syncProjectFromCanvas();
+      writeWorkspaceSession({
+        project: current,
+        projectDir,
+        savedDigest: projectDigest(current),
+      });
+    } catch {
+      // Canvas not ready yet.
+    }
+  }, [projectDir, syncProjectFromCanvas]);
+
+  const syncProjectRef = useRef(syncProjectFromCanvas);
+  syncProjectRef.current = syncProjectFromCanvas;
+  const projectDirRef = useRef(projectDir);
+  projectDirRef.current = projectDir;
+
+  useEffect(() => {
+    const persist = () => {
+      try {
+        const current = {
+          ...syncProjectRef.current(),
+        };
+        writeWorkspaceSession({
+          project: current,
+          projectDir: projectDirRef.current,
+          savedDigest: projectDigest(current),
+        });
+      } catch {
+        // ignore
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        persist();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", persist);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", persist);
+    };
+  }, []);
 
   const setOkStatus = (message: string) => {
     setStatusIsError(false);
@@ -178,6 +233,7 @@ export default function App() {
       editor.loadProject(cleared);
       setVariables({});
       setSelectedId(null);
+      persistWorkspace();
       setOkStatus("Fluxo limpo — escolha a pasta no Save (não sobrescreve o projeto anterior)");
     } catch (e) {
       setErrStatus(`Limpar fluxo falhou: ${formatError(e)}`);
@@ -205,6 +261,7 @@ export default function App() {
       setLogLines([]);
       setSelectedId(null);
       markSaved(loaded);
+      persistWorkspace();
       setOkStatus(`Opened ${dir}`);
     } catch (e) {
       setErrStatus(`Open failed: ${formatError(e)}`);
@@ -224,6 +281,7 @@ export default function App() {
       await invoke("save_project_cmd", { path: dir, project: current });
       setProject(current);
       markSaved(current);
+      persistWorkspace();
       setOkStatus(`Saved ${dir}`);
     } catch (e) {
       setErrStatus(`Save failed: ${formatError(e)}`);
