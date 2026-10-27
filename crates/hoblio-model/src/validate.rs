@@ -219,6 +219,16 @@ fn validate_variable_producers(graph: &FlowGraph) -> Result<(), ValidationError>
             }
             if matches!(
                 action,
+                ActionKind::ShowGetUserInput {
+                    user_input_variable,
+                    button_pressed_variable,
+                    ..
+                } if user_input_variable.trim().is_empty() || button_pressed_variable.trim().is_empty()
+            ) {
+                return Err(ValidationError::SetVariableNameMissing(node.id.clone()));
+            }
+            if matches!(
+                action,
                 ActionKind::ListAppend { list_variable, .. }
                     | ActionKind::ListClear { list_variable }
                     if list_variable.trim().is_empty()

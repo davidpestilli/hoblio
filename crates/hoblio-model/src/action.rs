@@ -1,5 +1,14 @@
 use serde::{Deserialize, Serialize};
 
+/// Text field layout for [`ActionKind::ShowGetUserInput`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum UserInputKind {
+    #[default]
+    SingleLine,
+    MultiLine,
+}
+
 /// Executable action attached to a flow node (Phase 0: stubs for future MVP actions).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -12,6 +21,12 @@ pub enum ActionKind {
         /// Optional pause after navigation (milliseconds).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         wait_ms: Option<u64>,
+        /// When true (default), launch Chromium with a visible window instead of headless.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        show_on_screen: Option<bool>,
+        /// When true (default with visible window), pass `--start-maximized` on launch.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        start_maximized: Option<bool>,
     },
     /// Click an element matched by CSS selector (requires prior `browser_navigate` in the same run).
     BrowserClick {
@@ -82,6 +97,21 @@ pub enum ActionKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         timeout_seconds: Option<f64>,
     },
+    /// Native input dialog (Windows; blocks until OK/Cancel).
+    ShowGetUserInput {
+        title: String,
+        message: String,
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        default_value: String,
+        #[serde(default)]
+        input_kind: UserInputKind,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        topmost: Option<bool>,
+        #[serde(default = "default_user_input_var")]
+        user_input_variable: String,
+        #[serde(default = "default_button_pressed_var")]
+        button_pressed_variable: String,
+    },
     /// Assign a run variable (PAD-style Set variable).
     SetVariable {
         variable: String,
@@ -117,9 +147,25 @@ impl ActionKind {
             ActionKind::FileRead { variable, .. } if !variable.is_empty() => {
                 vec![variable.as_str()]
             }
+            ActionKind::ShowGetUserInput {
+                user_input_variable,
+                button_pressed_variable,
+                ..
+            } => [user_input_variable.as_str(), button_pressed_variable.as_str()]
+                .into_iter()
+                .filter(|v| !v.is_empty())
+                .collect(),
             _ => vec![],
         }
     }
+}
+
+fn default_user_input_var() -> String {
+    "UserInput".into()
+}
+
+fn default_button_pressed_var() -> String {
+    "ButtonPressed".into()
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -167,6 +213,32 @@ mod tests {
     }
 
     #[test]
+    fn browser_navigate_show_on_screen_defaults_and_roundtrip() {
+        let json = r#"{"type":"browser_navigate","url":"https://example.com"}"#;
+        let action: ActionKind = serde_json::from_str(json).unwrap();
+        assert!(matches!(
+            action,
+            ActionKind::BrowserNavigate {
+                url,
+                wait_ms: None,
+                show_on_screen: None,
+                start_maximized: None,
+            } if url == "https://example.com"
+        ));
+
+        let with_flag = ActionKind::BrowserNavigate {
+            url: "https://example.com".into(),
+            wait_ms: Some(100),
+            show_on_screen: Some(false),
+            start_maximized: Some(false),
+        };
+        let back: ActionKind = serde_json::from_str(&serde_json::to_string(&with_flag).unwrap()).unwrap();
+        assert_eq!(with_flag, back);
+        let serialized = serde_json::to_string(&with_flag).unwrap();
+        assert!(serialized.contains("show_on_screen"));
+    }
+
+    #[test]
     fn browser_get_text_snake_case_tag() {
         let json = r#"{"type":"browser_get_text","selector":"h1"}"#;
         let action: ActionKind = serde_json::from_str(json).unwrap();
@@ -178,6 +250,27 @@ mod tests {
                 variable: None
             } if selector == "h1"
         ));
+    }
+
+    #[test]
+    fn show_get_user_input_roundtrip_and_produced() {
+        let action = ActionKind::ShowGetUserInput {
+            title: "Novo".into(),
+            message: "Teste".into(),
+            default_value: String::new(),
+            input_kind: UserInputKind::SingleLine,
+            topmost: Some(false),
+            user_input_variable: "UserInput".into(),
+            button_pressed_variable: "ButtonPressed".into(),
+        };
+        let json = serde_json::to_string(&action).unwrap();
+        assert!(json.contains("show_get_user_input"));
+        let back: ActionKind = serde_json::from_str(&json).unwrap();
+        assert_eq!(action, back);
+        assert_eq!(
+            back.produced_variables(),
+            vec!["UserInput", "ButtonPressed"]
+        );
     }
 
     #[test]

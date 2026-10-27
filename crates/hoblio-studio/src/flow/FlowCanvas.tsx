@@ -219,9 +219,18 @@ function FlowSurface({ controller, onSelectNodeId, onClearFlow }: FlowCanvasProp
             onNodeDragStop={handleNodeDragStop}
             onBeforeDelete={handleBeforeDelete}
             onSelectionChange={({ nodes: selected }) => {
-              onSelectNodeId(selected[0]?.id ?? null);
+              const id = selected[0]?.id;
+              // Ignore empty selection: clicks on the properties panel deselect on the
+              // canvas but should not close the node inspector.
+              if (id) {
+                onSelectNodeId(id);
+              }
             }}
-            onEdgeClick={(_, edge) => controller.selectEdge(edge.id)}
+            onPaneClick={() => onSelectNodeId(null)}
+            onEdgeClick={(_, edge) => {
+              controller.selectEdge(edge.id);
+              onSelectNodeId(null);
+            }}
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
             <MiniMap pannable zoomable />

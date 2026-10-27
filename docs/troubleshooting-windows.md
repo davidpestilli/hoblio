@@ -79,6 +79,30 @@ Com **menos de ~5 GB livres no C:**, o `setup-dev.bat` define automaticamente `C
 
 Detalhes de detecção automática: [guia de construção](guia-construcao.md) (variáveis de ambiente).
 
+### Janela maximizada mas página numa faixa (resto cinza)
+
+O runtime desliga a emulação de viewport fixa 800×600 do chromiumoxide quando **Abrir o navegador na tela** está ativo. Atualize o binário (`tauri dev` / rebuild) se ainda vir faixa cinza.
+
+---
+
+## Build demora ~5 minutos “sempre”
+
+| Sintoma | Causa comum | O que fazer |
+|---------|-------------|-------------|
+| ~5 min após `cargo clean` ou clone | Build frio | Normal uma vez; depois use `tauri dev` aberto |
+| ~5 min a cada mudança pequena | `target/` diferente (`CARGO_TARGET_DIR`) ou Studio aberto bloqueando link | Use só `target/` do repo; feche o `.exe` antes de build completo |
+| Script benchmark para no PowerShell | Cargo escreve progresso em stderr | Use `scripts/benchmark-build.ps1` atualizado (trata stderr) |
+
+Medição: `.\scripts\benchmark-build.ps1` na raiz → `reports/build-benchmark.txt`. Esperado com cache quente: noop ~10–15 s; mudança em `hoblio-runtime` ~25–30 s.
+
+Pasta `target/` grande (dezenas de GB): `cargo clean` libera espaço; próximo build será longo. Perfil dev atual reduz tamanho vs. debug pleno em todas as deps.
+
+---
+
+## `failed to remove hoblio-studio.exe` / Acesso negado (os error 5)
+
+Feche o Studio e qualquer `tauri dev` antes de `cargo build -p hoblio-studio`.
+
 ---
 
 ## Studio não abre (Tauri)

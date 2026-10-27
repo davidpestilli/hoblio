@@ -18,7 +18,8 @@ Hoblio/
 │   ├── hoblio-cli/        # hoblio validate | run
 │   └── hoblio-studio/     # Tauri 2 + React + React Flow (UI)
 ├── examples/              # Projetos de fluxo de demonstração
-├── scripts/               # setup-dev.bat, eval-flow-control.ps1, eval-rpa-abc.ps1
+├── scripts/               # setup-dev.bat, dev-studio.ps1, check-rust.ps1, benchmark-build.ps1, eval-*.ps1
+├── .cargo/config.toml     # target-dir, linker dev (rust-lld)
 └── docs/                  # Ver árvore abaixo
 ```
 
@@ -119,19 +120,47 @@ cargo build              # tudo, incluindo studio (Rust side)
 cargo build -p hoblio-cli
 ```
 
-Primeira compilação pode levar vários minutos.
+Primeira compilação (ou após `cargo clean`) pode levar **~5 min** no app Tauri. Com cache quente, rebuild incremental costuma ficar em **dezenas de segundos** — veja §3.1.
+
+### 3.1 Perfil dev e medição de rebuild
+
+O workspace usa `[profile.dev]` otimizado para iterar: dependências externas **sem** símbolos de debug (link mais rápido, `target/` menor); crates `hoblio-*` com `debug = 1`. Linker dev: `rust-lld` em `.cargo/config.toml`.
+
+| Comando | Uso |
+|---------|-----|
+| `.\scripts\dev-studio.ps1` | `tauri dev` a partir da raiz (recomendado) |
+| `.\scripts\check-rust.ps1` | `cargo check` em model + runtime + studio (segundos) |
+| `.\scripts\benchmark-build.ps1` | Três builds cronometrados → `reports/build-benchmark.txt` |
+| `.\scripts\measure-build.ps1` | Um build cronometrado |
+
+**Referência (máquina de dev, pós-`cargo clean` + perfil atual):** build frio ~310 s; noop ~12 s; touch em `hoblio-runtime` ~26 s.
+
+**Boas práticas**
+
+- Não defina `CARGO_TARGET_DIR` no ambiente salvo troubleshooting — cache separado = rebuild “do zero”.
+- Feche o `.exe` do Studio antes de `cargo build` completo (evita *Acesso negado* ao sobrescrever `hoblio-studio.exe`).
+- Evite `cargo clean` salvo liberar disco ou depurar cache corrompido.
+- Só mudou UI (`.tsx`)? O Vite recarrega; Rust só quando mudar backend.
+
+Opcional: `cargo install sccache` e descomente `rustc-wrapper` em `.cargo/config.toml`.
 
 ---
 
 ## 4. Compilar e rodar o Studio (dev)
 
 ```powershell
-cd C:\Users\david\projetos\Hoblio\crates\hoblio-studio
+cd crates\hoblio-studio
 npm install              # primeira vez ou após mudar package.json
-npm run tauri dev
+npm run tauri dev        # ou npm run dev:app
 ```
 
-Alternativa na raiz:
+Na raiz do repo:
+
+```powershell
+.\scripts\dev-studio.ps1
+```
+
+Alternativa:
 
 ```powershell
 cargo tauri dev --manifest-path crates/hoblio-studio/src-tauri/Cargo.toml

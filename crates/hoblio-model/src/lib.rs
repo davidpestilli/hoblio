@@ -7,7 +7,7 @@ mod flow;
 mod project;
 mod validate;
 
-pub use action::{ActionKind, LogAction, NodeKind};
+pub use action::{ActionKind, LogAction, NodeKind, UserInputKind};
 pub use control::{
     CompareOperator, ControlKind, EdgePort, ForEachControl, IfControl, RepeatControl, WhileControl,
 };

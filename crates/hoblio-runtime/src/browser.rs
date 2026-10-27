@@ -50,12 +50,20 @@ impl BrowserContext {
         });
     }
 
-    pub fn navigate(&self, url: &str, wait_ms: Option<u64>) -> Result<String> {
+    pub fn navigate(
+        &self,
+        url: &str,
+        wait_ms: Option<u64>,
+        show_on_screen: Option<bool>,
+        start_maximized: Option<bool>,
+    ) -> Result<String> {
         let url = url.to_string();
+        let show_on_screen = show_on_screen.unwrap_or(true);
+        let start_maximized = start_maximized.unwrap_or(true);
         self.rt.block_on(async {
             let mut guard = self.inner.lock().await;
             if guard.is_none() {
-                *guard = Some(launch_session(&url).await?);
+                *guard = Some(launch_session(&url, show_on_screen, start_maximized).await?);
             } else {
                 let session = guard.as_mut().expect("session");
                 session
@@ -190,13 +198,23 @@ impl BrowserContext {
     }
 }
 
-fn browser_config_builder() -> Result<BrowserConfig> {
+fn browser_config_builder(show_on_screen: bool, start_maximized: bool) -> Result<BrowserConfig> {
     let exe = resolve_chromium_executable()?;
-    BrowserConfig::builder()
-        .new_headless_mode()
+    let mut builder = BrowserConfig::builder()
         .arg("--remote-allow-origins=*")
         .arg("--disable-background-networking")
-        .chrome_executable(exe)
+        .chrome_executable(exe);
+    builder = if show_on_screen {
+        // Default chromiumoxide viewport is 800×600 CDP emulation — leaves gray bands
+        // when the window is larger (e.g. --start-maximized). Use the real window size.
+        builder.with_head().viewport(None)
+    } else {
+        builder.new_headless_mode()
+    };
+    if show_on_screen && start_maximized {
+        builder = builder.arg("--start-maximized");
+    }
+    builder
         .build()
         .map_err(|e| anyhow::anyhow!("invalid browser config: {e}"))
 }
@@ -215,8 +233,12 @@ async fn open_page_at(browser: &Browser, url: &str) -> Result<Page> {
     Ok(page)
 }
 
-async fn launch_session(initial_url: &str) -> Result<SessionInner> {
-    let config = browser_config_builder()?;
+async fn launch_session(
+    initial_url: &str,
+    show_on_screen: bool,
+    start_maximized: bool,
+) -> Result<SessionInner> {
+    let config = browser_config_builder(show_on_screen, start_maximized)?;
     let (browser, mut handler) = Browser::launch(config)
         .await
         .context("start Chromium for CDP (install Chrome/Edge or set HOBLIO_CHROME_PATH)")?;
@@ -302,7 +324,8 @@ mod tests {
     #[ignore = "requires Chrome/Chromium and network to example.com"]
     fn browser_example_com_navigate_and_get_text() {
         let ctx = BrowserContext::new().expect("runtime");
-        ctx.navigate("https://example.com", Some(300)).expect("navigate");
+        ctx.navigate("https://example.com", Some(300), None, None)
+            .expect("navigate");
         ctx.wait_for("body p", Some(15_000)).expect("wait body paragraph");
         let mut vars = crate::variables::RunVariables::new();
         let summary = ctx

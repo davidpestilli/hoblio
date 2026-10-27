@@ -58,6 +58,30 @@ function producerFromAction(node: FlowNode, action: ActionKind): FlowVariablePro
         },
       ];
     }
+    case "show_get_user_input": {
+      const producers: FlowVariableProducer[] = [];
+      const user = action.user_input_variable.trim();
+      if (user) {
+        producers.push({
+          name: user,
+          kind: "text",
+          nodeId: node.id,
+          nodeLabel: nodeTitle(node),
+          source: "ShowGetUserInput (UserInput)",
+        });
+      }
+      const button = action.button_pressed_variable.trim();
+      if (button) {
+        producers.push({
+          name: button,
+          kind: "text",
+          nodeId: node.id,
+          nodeLabel: nodeTitle(node),
+          source: "ShowGetUserInput (ButtonPressed)",
+        });
+      }
+      return producers;
+    }
     default:
       return [];
   }
@@ -130,6 +154,19 @@ function patchActionRename(
         ...action,
         title: replaceTemplateVars(action.title, oldName, newName),
         text: replaceTemplateVars(action.text, oldName, newName),
+      };
+    case "show_get_user_input":
+      return {
+        ...action,
+        title: replaceTemplateVars(action.title, oldName, newName),
+        message: replaceTemplateVars(action.message, oldName, newName),
+        default_value: action.default_value
+          ? replaceTemplateVars(action.default_value, oldName, newName)
+          : undefined,
+        user_input_variable:
+          action.user_input_variable === oldName ? newName : action.user_input_variable,
+        button_pressed_variable:
+          action.button_pressed_variable === oldName ? newName : action.button_pressed_variable,
       };
     case "set_variable":
       return {

@@ -1,0 +1,11 @@
+# Não defina CARGO_TARGET_DIR no ambiente (Cursor/sandbox usa cache separado → rebuild de 5+ min).
+[build]
+target-dir = "target"
+
+# Link mais rápido no dev (rust-lld vem com rustup). Comente se der erro de linker.
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"
+
+# Opcional: após `cargo install sccache`, descomente para cache entre sessões.
+# [build]
+# rustc-wrapper = "sccache"

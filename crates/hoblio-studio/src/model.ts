@@ -24,7 +24,13 @@ export type EdgePort = "main" | "then" | "else" | "body" | "after";
 export type ActionKind =
   | { type: "log"; message: string }
   | { type: "no_op" }
-  | { type: "browser_navigate"; url: string; wait_ms?: number }
+  | {
+      type: "browser_navigate";
+      url: string;
+      wait_ms?: number;
+      show_on_screen?: boolean;
+      start_maximized?: boolean;
+    }
   | {
       type: "browser_click";
       selector: string;
@@ -47,7 +53,17 @@ export type ActionKind =
   | { type: "list_clear"; list_variable: string }
   | { type: "delay"; milliseconds: number }
   | { type: "http_get"; url: string }
-  | { type: "show_message"; title: string; text: string; timeout_seconds?: number };
+  | { type: "show_message"; title: string; text: string; timeout_seconds?: number }
+  | {
+      type: "show_get_user_input";
+      title: string;
+      message: string;
+      default_value?: string;
+      input_kind?: "single_line" | "multi_line";
+      topmost?: boolean;
+      user_input_variable: string;
+      button_pressed_variable: string;
+    };
 
 export type DefaultActionOptions = {
   takenNames?: Set<string>;
@@ -164,6 +180,8 @@ export function actionLabel(action: ActionKind): string {
       return "HttpGet";
     case "show_message":
       return "ShowMessage";
+    case "show_get_user_input":
+      return "ShowGetUserInput";
   }
 }
 
@@ -210,7 +228,13 @@ export function defaultAction(
     case "no_op":
       return { type: "no_op" };
     case "browser_navigate":
-      return { type: "browser_navigate", url: "https://example.com", wait_ms: 500 };
+      return {
+        type: "browser_navigate",
+        url: "https://example.com",
+        wait_ms: 500,
+        show_on_screen: true,
+        start_maximized: true,
+      };
     case "browser_click":
       return {
         type: "browser_click",
@@ -264,7 +288,47 @@ export function defaultAction(
         text: "Mensagem de exemplo",
         timeout_seconds: 2,
       };
+    case "show_get_user_input": {
+      const user_input_variable =
+        defaultOutputVariableName("show_get_user_input_user", taken) ?? "UserInput";
+      const button_pressed_variable =
+        defaultOutputVariableName("show_get_user_input_button", taken) ?? "ButtonPressed";
+      return {
+        type: "show_get_user_input",
+        title: "Novo",
+        message: "Digite um valor",
+        default_value: "",
+        input_kind: "single_line",
+        topmost: true,
+        user_input_variable,
+        button_pressed_variable,
+      };
+    }
   }
+}
+
+export function patchBrowserNavigate(
+  current: ActionKind,
+  patch: {
+    url?: string;
+    wait_ms?: number;
+    show_on_screen?: boolean;
+    start_maximized?: boolean;
+  },
+): ActionKind {
+  const base =
+    current.type === "browser_navigate"
+      ? current
+      : { type: "browser_navigate" as const, url: "", wait_ms: undefined as number | undefined };
+  return {
+    type: "browser_navigate",
+    url: patch.url ?? base.url,
+    wait_ms: patch.wait_ms !== undefined ? patch.wait_ms : base.wait_ms,
+    show_on_screen:
+      patch.show_on_screen !== undefined ? patch.show_on_screen : base.show_on_screen,
+    start_maximized:
+      patch.start_maximized !== undefined ? patch.start_maximized : base.start_maximized,
+  };
 }
 
 /** Shared fields for browser DOM actions (not navigate). */

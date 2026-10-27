@@ -4,6 +4,8 @@ const OUTPUT_PREFIX: Record<string, string> = {
   browser_get_text: "BrowserText",
   set_variable: "Var",
   file_read: "FileContent",
+  show_get_user_input_user: "UserInput",
+  show_get_user_input_button: "ButtonPressed",
 };
 
 export function defaultOutputVariableName(

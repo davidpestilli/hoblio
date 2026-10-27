@@ -10,4 +10,5 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+reports/
 crates/hoblio-studio/src-tauri/examples/

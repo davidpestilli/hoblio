@@ -1,0 +1,24 @@
+---
+description: Build and recompile workflow for Hoblio (Rust/Tauri); avoid slow redundant compiles
+alwaysApply: true
+---
+
+# Recompilação Rust / Tauri
+
+## Quando o usuário precisa testar mudanças
+
+- **Só Studio (React/TS, ex. PropertiesPanel):** não rodar `cargo build` nem `cargo test` no workspace. Dizer para usar `npm run dev` em `crates/hoblio-studio` ou deixar `tauri dev` recarregar o front.
+- **Mudanças em `hoblio-model`, `hoblio-runtime` ou `src-tauri`:** o usuário precisa recompilar o binário Tauri. Preferir **`cargo tauri dev`** (ou deixar a instância já aberta recompilar) em vez de `cargo build --release` / `tauri build` para iterar.
+
+## O que o agente deve fazer (e evitar)
+
+- **Validar Rust:** usar `cargo check -p hoblio-model -p hoblio-runtime` (rápido). Só `cargo test` ou build completo quando o usuário pedir ou for necessário para provar comportamento.
+- **Um Cargo por vez:** não disparar `cargo test`/build longo em paralelo com o usuário — causa `Blocking waiting for file lock on package cache`. Se precisar testar, avisar ou usar `check` primeiro.
+- **Nunca definir `CARGO_TARGET_DIR` no shell do agente** (usa o `target/` do workspace). Cache separado força rebuild de ~5 min como se fosse projeto novo.
+- **Medição local:** o usuário pode rodar `.\scripts\benchmark-build.ps1` após mudanças de perfil de build.
+- **Escopo mínimo:** `-p hoblio-runtime` ou `-p hoblio-studio` em vez de `cargo build` no workspace inteiro sem necessidade.
+- **Não usar sandbox target divergente** para “provar” build se o usuário vai recompilar localmente; testes do agente não substituem o `target/` do projeto dele.
+
+## Mensagem curta após editar Rust
+
+Informar: (1) se precisa recompilar Tauri ou só front; (2) se `tauri dev` já estiver aberto, aguardar o rebuild automático; (3) script opcional: `.\scripts\check-rust.ps1` ou `.\scripts\dev-studio.ps1`.

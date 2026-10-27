@@ -31,3 +31,36 @@ tauri = { version = "2", features = [] }
 tauri-build = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
+
+# Dev: compilar rápido — deps sem debug (link menor), crates Hoblio com debug=1.
+[profile.dev]
+incremental = true
+opt-level = 0
+debug = 1
+codegen-units = 256
+
+[profile.dev.build-override]
+opt-level = 0
+
+# Dependências externas: sem símbolos de debug → rebuild/link bem mais rápido.
+[profile.dev.package."*"]
+opt-level = 0
+debug = false
+
+[profile.dev.package.hoblio-model]
+debug = 1
+
+[profile.dev.package.hoblio-serde]
+debug = 1
+
+[profile.dev.package.hoblio-log]
+debug = 1
+
+[profile.dev.package.hoblio-runtime]
+debug = 1
+
+[profile.dev.package.hoblio-cli]
+debug = 1
+
+[profile.dev.package.hoblio-studio]
+debug = 1

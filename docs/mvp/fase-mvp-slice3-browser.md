@@ -6,11 +6,11 @@
 
 | Ação | Parâmetros | Comportamento |
 |------|------------|---------------|
-| `browser_navigate` | `url`, `wait_ms?` | Abre Chromium controlado (se ainda não aberto), navega, mantém a aba para passos seguintes |
+| `browser_navigate` | `url`, `wait_ms?`, `show_on_screen?`, `start_maximized?` | Abre Chromium (visível por padrão, maximizado por padrão), navega, mantém a aba para passos seguintes |
 | `browser_click` | `selector`, `timeout_ms?` | Clique em elemento CSS (padrão timeout 10s) |
-| `browser_fill` | `selector`, `text`, `timeout_ms?` | Foca, limpa valor, digita texto |
+| `browser_fill` | `selector`, `text`, `timeout_ms?` | Foca, limpa valor, digita texto (`text` com `{variavel}`) |
 | `browser_wait_for` | `selector`, `timeout_ms?` | Espera elemento existir no DOM |
-| `browser_get_text` | `selector`, `timeout_ms?`, `variable?` | Lê `innerText`; com `variable`, grava valor para `{nome}` em ações seguintes (`file_write`, `log`) |
+| `browser_get_text` | `selector`, `timeout_ms?`, `variable?` | Lê `innerText`; com `variable`, grava valor para `{nome}` em ações seguintes; Studio mostra **Last run values** após Run |
 
 Todas as ações DOM exigem um `browser_navigate` anterior **na mesma execução** do fluxo.
 

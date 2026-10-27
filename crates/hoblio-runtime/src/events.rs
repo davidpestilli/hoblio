@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -6,7 +8,12 @@ pub enum RunEvent {
     RunStarted { project: String },
     NodeEnter { node_id: String },
     NodeExit { node_id: String },
-    ActionExecuted { node_id: String, summary: String },
+    ActionExecuted {
+        node_id: String,
+        summary: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        variables: Option<HashMap<String, String>>,
+    },
     RunFinished { last_node: String },
 }
 

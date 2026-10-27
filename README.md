@@ -33,12 +33,26 @@ Atalho na raiz: `setup-dev.bat` (delega para `scripts\`).
 
 O script **verifica espaço livre no C:** (~4 ou ~7 GB) **antes** de instalar ou compilar, tenta instalar **Rust** e **Node.js LTS** via `winget`, instala **Build Tools MSVC** com carga C++ (`link.exe` — **não** é o VS Code), instala o frontend do Studio, roda `cargo test` e `validate` nos exemplos, e **informa Chrome/Edge detectado** para demos browser. Opção **`scripts\setup-dev.bat --full`** também executa fluxos de demo (browser se houver Chromium). Runtime: **detecção automática** de Chrome/Edge e variáveis `{nome}` em fluxos. Pré-requisitos: [guia de construção](docs/guia-construcao.md) · troubleshooting: [Windows](docs/troubleshooting-windows.md).
 
-Depois do setup:
+Depois do setup, suba o Studio (deixe o terminal aberto enquanto desenvolve):
 
 ```powershell
-cd crates\hoblio-studio
-npm run tauri dev
+cd E:\Projetos\hoblio
+.\scripts\dev-studio.ps1
 ```
+
+Equivalente manual: `cd crates\hoblio-studio` → `npm run tauri dev` (ou `npm run dev:app`).
+
+### Tempo de build (Rust / Tauri)
+
+| Situação | Tempo típico (referência) |
+|----------|---------------------------|
+| Build **frio** (`cargo clean`, primeiro build) | ~**5 min** |
+| Rebuild **sem mudança** (incremental) | ~**10–15 s** |
+| Mudança pequena em `hoblio-runtime` | ~**25–30 s** |
+
+Evite `cargo clean` no dia a dia; o cache fica em `target/` na raiz do repo. Valide Rust sem linkar o Tauri: `.\scripts\check-rust.ps1`. Benchmark local: `.\scripts\benchmark-build.ps1` → `reports/build-benchmark.txt`.
+
+Detalhes: [guia de construção §3–4](docs/guia-construcao.md) · [troubleshooting Windows](docs/troubleshooting-windows.md).
 
 ## Build manual (sem setup-dev)
 
@@ -63,6 +77,10 @@ Hoblio/
   examples/              # pastas de projeto (manifest.json + flow.json)
   docs/                  # guias, mvp/, avaliacao/relatorios/
   scripts/setup-dev.bat
+  scripts/dev-studio.ps1      # tauri dev
+  scripts/check-rust.ps1      # cargo check (rápido)
+  scripts/benchmark-build.ps1 # medir rebuild incremental
+  .cargo/config.toml          # target/ + rust-lld (dev)
 ```
 
 **Autor:** David Souza · fuso `America/Sao_Paulo`

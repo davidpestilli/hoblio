@@ -2,7 +2,12 @@ export type RunEvent =
   | { kind: "run_started"; project: string }
   | { kind: "node_enter"; node_id: string }
   | { kind: "node_exit"; node_id: string }
-  | { kind: "action_executed"; node_id: string; summary: string }
+  | {
+      kind: "action_executed";
+      node_id: string;
+      summary: string;
+      variables?: Record<string, string>;
+    }
   | { kind: "run_finished"; last_node: string };
 
 export type LogLine = {

@@ -55,6 +55,9 @@ export default function App() {
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [lastRunVariablesByNode, setLastRunVariablesByNode] = useState<
+    Record<string, Record<string, string>>
+  >({});
   const [variables, setVariables] = useState<Record<string, unknown>>(
     () => defaultProject().variables,
   );
@@ -94,8 +97,17 @@ export default function App() {
       const fn = await listen<RunEvent>("hoblio-run-event", (ev) => {
         if (cancelled) return;
         const e = ev.payload;
+        if (e.kind === "run_started") {
+          setLastRunVariablesByNode({});
+        }
         if (e.kind === "node_enter") setActiveNodeId(e.node_id);
         if (e.kind === "run_finished") setActiveNodeId(null);
+        if (e.kind === "action_executed" && e.variables && Object.keys(e.variables).length > 0) {
+          setLastRunVariablesByNode((prev) => ({
+            ...prev,
+            [e.node_id]: e.variables!,
+          }));
+        }
         setLogLines((prev) => [...prev, logLineFromEvent(e)]);
       });
       if (cancelled) {
@@ -130,6 +142,10 @@ export default function App() {
     const n = editor.nodes.find((x) => x.id === selectedId);
     return n?.data.flowNode ?? null;
   }, [editor.nodes, selectedId]);
+
+  const lastRunVariablesForSelection = selectedId
+    ? lastRunVariablesByNode[selectedId]
+    : undefined;
 
   const markSaved = useCallback((current: FlowProject) => {
     savedDigestRef.current = projectDigest(current);
@@ -304,6 +320,14 @@ export default function App() {
     [editor],
   );
 
+  const focusFlowNode = useCallback(
+    (nodeId: string) => {
+      setSelectedId(nodeId);
+      editor.selectNode(nodeId);
+    },
+    [editor],
+  );
+
   return (
     <div className="app">
       <header className="toolbar">
@@ -342,8 +366,12 @@ export default function App() {
           <button type="button" onClick={() => addAction("http_get")}>
             HttpGet
           </button>
+          <h4 className="palette-group">Cx Mensagens</h4>
           <button type="button" onClick={() => addAction("show_message")}>
             ShowMessage
+          </button>
+          <button type="button" onClick={() => addAction("show_get_user_input")}>
+            ShowGetUserInput
           </button>
           <h4 className="palette-group">Arquivos</h4>
           <button type="button" onClick={() => addAction("file_write")}>
@@ -429,8 +457,9 @@ export default function App() {
           flowNodes={flowNodes}
           editing={editor.editing}
           variables={variables}
+          lastRunVariables={lastRunVariablesForSelection}
           onVariablesChange={setVariables}
-          onSelectFlowNode={setSelectedId}
+          onSelectFlowNode={focusFlowNode}
           onRenameFlowVariable={handleRenameFlowVariable}
           onChange={(node, options) => editor.updateFlowNode(node, options)}
           onPropertyCommit={() => editor.commitHistory()}

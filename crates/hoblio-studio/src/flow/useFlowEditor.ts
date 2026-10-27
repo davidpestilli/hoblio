@@ -101,6 +101,7 @@ export interface FlowEditorController {
   isValidConnection: (connection: Connection) => boolean;
   selectedEdgeId: string | null;
   selectEdge: (edgeId: string | null) => void;
+  selectNode: (nodeId: string | null) => void;
   setEdgeLabel: (edgeId: string, label: string) => void;
   setEdgeWaypoints: (edgeId: string, waypoints: Waypoint[]) => void;
   setNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
@@ -480,6 +481,20 @@ export function useFlowEditor(
     [setEdges],
   );
 
+  const selectNode = useCallback(
+    (nodeId: string | null) => {
+      setSelectedEdgeId(null);
+      setEdges((current) => current.map((edge) => ({ ...edge, selected: false })));
+      setNodes((current) =>
+        current.map((node) => ({
+          ...node,
+          selected: nodeId !== null && node.id === nodeId,
+        })),
+      );
+    },
+    [setEdges, setNodes],
+  );
+
   const addControlNode = useCallback(
     (
       kind: Extract<
@@ -647,6 +662,7 @@ export function useFlowEditor(
     isValidConnection,
     selectedEdgeId,
     selectEdge,
+    selectNode,
     setEdgeLabel,
     setEdgeWaypoints,
     setNodePosition,

@@ -114,16 +114,19 @@ Ordem típica: **`browser_navigate`** primeiro; depois passos DOM na **mesma exe
 
 | Ação | Uso |
 |------|-----|
-| `browser_navigate` | Abrir URL |
+| `browser_navigate` | Abrir URL; `wait_ms?`; `show_on_screen?` (padrão visível); `start_maximized?` (padrão maximizar janela) |
 | `browser_wait_for` | Esperar seletor CSS |
 | `browser_click` | Clique; opcional `wait_for_navigation`, `wait_selector_after` |
 | `browser_wait_navigation` | Esperar navegação da aba |
-| `browser_fill` | Digitar em campo |
-| `browser_get_text` | Ler texto → variável (`variable`) |
+| `browser_fill` | Digitar em campo; **`text` aceita `{variavel}`** |
+| `browser_get_text` | Ler texto → variável (`variable`); use `{nome}` depois |
+| `show_get_user_input` | Diálogo nativo (Windows); grava variáveis de saída configuradas |
 
 Nós de ação podem ter **`error_handling`**: `retry_count`, `retry_delay_ms`, `on_failure` (`stop` \| `continue`). Ver [slice 8](mvp/fase-mvp-slice8-browser-resilience.md).
 
-**Variáveis:** objeto `variables` no `flow.json` ou painel do Studio; `{nome}` em `log` e `file_write`.
+**Variáveis:** objeto `variables` no `flow.json` ou painel do Studio; `{nome}` em `log`, `file_write`, `file_append`, `browser_fill`, `show_message`, `set_variable`, etc.
+
+Após **Run**, nós que **produzem** variáveis (`show_get_user_input`, `browser_get_text`, …) exibem **Last run values** no painel Properties (antes de *On error*).
 
 **Chrome / Edge:** detecção automática no Windows; override: `HOBLIO_CHROME_PATH`.
 

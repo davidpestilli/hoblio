@@ -14,15 +14,35 @@ import type {
   ActionKind,
   OnFailure,
 } from "./model";
-import { actionLabel, defaultAction, patchBrowserDomAction } from "./model";
+import { actionLabel, defaultAction, patchBrowserDomAction, patchBrowserNavigate } from "./model";
 import { ProjectVariablesPanel } from "./ProjectVariablesPanel";
 import { listVariableNames } from "./projectVariables";
+
+function LastRunValues({ lastRunVariables }: { lastRunVariables?: Record<string, string> }) {
+  if (!lastRunVariables || Object.keys(lastRunVariables).length === 0) {
+    return null;
+  }
+  return (
+    <div className="last-run-vars">
+      <h5>Last run values</h5>
+      <ul className="flow-var-list">
+        {Object.entries(lastRunVariables).map(([name, value]) => (
+          <li key={name}>
+            <span className="flow-var-name">{name}</span>
+            <span className="flow-var-meta">{value || "(empty)"}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 type Props = {
   node: FlowNode | null;
   flowNodes: FlowNode[];
   editing: boolean;
   variables: Record<string, unknown>;
+  lastRunVariables?: Record<string, string>;
   onVariablesChange: (variables: Record<string, unknown>) => void;
   onSelectFlowNode?: (nodeId: string) => void;
   onRenameFlowVariable?: (oldName: string, newName: string) => void;
@@ -36,6 +56,7 @@ export function PropertiesPanel({
   flowNodes,
   editing,
   variables,
+  lastRunVariables,
   onVariablesChange,
   onSelectFlowNode,
   onRenameFlowVariable,
@@ -380,6 +401,7 @@ export function PropertiesPanel({
               <option value="increase_variable">IncreaseVariable</option>
               <option value="decrease_variable">DecreaseVariable</option>
               <option value="show_message">ShowMessage</option>
+              <option value="show_get_user_input">ShowGetUserInput</option>
             </select>
           </label>
           <p className="hint">Current: {actionLabel(node.action)}</p>
@@ -586,6 +608,11 @@ export function PropertiesPanel({
                   }
                   onBlur={commitDraft}
                 />
+                {scalarVars.length > 0 ? (
+                  <span className="hint">
+                    Use {"{name}"} — e.g. {scalarVars.slice(0, 3).map((n) => `{${n}}`).join(", ")}
+                  </span>
+                ) : null}
               </label>
               <label>
                 Timeout (seconds, empty = until Fechar)
@@ -608,6 +635,154 @@ export function PropertiesPanel({
             </>
           )}
 
+          {node.action.type === "show_get_user_input" && (
+            <>
+              <label>
+                Dialog title
+                <input
+                  value={node.action.title}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      ...node.action!,
+                      type: "show_get_user_input",
+                      title: e.target.value,
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+              </label>
+              <label>
+                Message
+                <textarea
+                  rows={3}
+                  value={node.action.message}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      ...node.action!,
+                      type: "show_get_user_input",
+                      message: e.target.value,
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+              </label>
+              <label>
+                Default value
+                <input
+                  value={node.action.default_value ?? ""}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      ...node.action!,
+                      type: "show_get_user_input",
+                      default_value: e.target.value,
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+              </label>
+              <label>
+                Input type
+                <select
+                  value={node.action.input_kind ?? "single_line"}
+                  disabled={readOnly}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      ...node.action!,
+                      type: "show_get_user_input",
+                      input_kind: e.target.value as "single_line" | "multi_line",
+                    })
+                  }
+                  onBlur={commitDraft}
+                >
+                  <option value="single_line">Single line</option>
+                  <option value="multi_line">Multi line</option>
+                </select>
+              </label>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={node.action.topmost ?? false}
+                  disabled={readOnly}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      ...node.action!,
+                      type: "show_get_user_input",
+                      topmost: e.target.checked,
+                    })
+                  }
+                  onBlur={commitDraft}
+                />
+                Keep dialog always on top
+              </label>
+              <label>
+                UserInput variable
+                <input
+                  value={node.action.user_input_variable}
+                  onFocus={() => {
+                    outputNameBeforeEdit.current =
+                      node.action?.type === "show_get_user_input"
+                        ? node.action.user_input_variable
+                        : "";
+                  }}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      ...node.action!,
+                      type: "show_get_user_input",
+                      user_input_variable: e.target.value,
+                    })
+                  }
+                  onBlur={(e) => {
+                    commitOutputVariableRename(outputNameBeforeEdit.current, e.target.value.trim());
+                    commitDraft();
+                  }}
+                  disabled={readOnly}
+                />
+                {validateProducerName(node.action.user_input_variable) ? (
+                  <span className="var-field-error">
+                    {validateProducerName(node.action.user_input_variable)}
+                  </span>
+                ) : (
+                  <span className="hint">Text entered by the user (PAD: UserInput).</span>
+                )}
+              </label>
+              <label>
+                ButtonPressed variable
+                <input
+                  value={node.action.button_pressed_variable}
+                  onFocus={() => {
+                    outputNameBeforeEdit.current =
+                      node.action?.type === "show_get_user_input"
+                        ? node.action.button_pressed_variable
+                        : "";
+                  }}
+                  onChange={(e) =>
+                    patchActionDraft({
+                      ...node.action!,
+                      type: "show_get_user_input",
+                      button_pressed_variable: e.target.value,
+                    })
+                  }
+                  onBlur={(e) => {
+                    commitOutputVariableRename(outputNameBeforeEdit.current, e.target.value.trim());
+                    commitDraft();
+                  }}
+                  disabled={readOnly}
+                />
+                {validateProducerName(node.action.button_pressed_variable) ? (
+                  <span className="var-field-error">
+                    {validateProducerName(node.action.button_pressed_variable)}
+                  </span>
+                ) : (
+                  <span className="hint">OK or Cancel (PAD: ButtonPressed).</span>
+                )}
+              </label>
+              <p className="hint">
+                Blocks the flow until OK/Cancel (Windows). The dialog runs only during Run, not when
+                you select this node.
+              </p>
+            </>
+          )}
+
           {node.action.type === "browser_navigate" && (
             <>
               <label>
@@ -615,11 +790,9 @@ export function PropertiesPanel({
                 <input
                   value={node.action.url}
                   onChange={(e) =>
-                    patchActionDraft({
-                      type: "browser_navigate",
-                      url: e.target.value,
-                      wait_ms: node.action!.type === "browser_navigate" ? node.action.wait_ms : undefined,
-                    })
+                    patchActionDraft(
+                      patchBrowserNavigate(node.action!, { url: e.target.value }),
+                    )
                   }
                   onBlur={commitDraft}
                 />
@@ -630,15 +803,52 @@ export function PropertiesPanel({
                   type="number"
                   value={node.action.wait_ms ?? ""}
                   onChange={(e) =>
-                    patchActionDraft({
-                      type: "browser_navigate",
-                      url: node.action!.type === "browser_navigate" ? node.action.url : "",
-                      wait_ms: e.target.value ? Number(e.target.value) : undefined,
-                    })
+                    patchActionDraft(
+                      patchBrowserNavigate(node.action!, {
+                        wait_ms: e.target.value ? Number(e.target.value) : undefined,
+                      }),
+                    )
                   }
                   onBlur={commitDraft}
                 />
               </label>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={node.action.show_on_screen ?? true}
+                  disabled={readOnly}
+                  onChange={(e) =>
+                    patchActionDraft(
+                      patchBrowserNavigate(node.action!, { show_on_screen: e.target.checked }),
+                    )
+                  }
+                  onBlur={commitDraft}
+                />
+                Abrir o navegador na tela
+              </label>
+              {(node.action.show_on_screen ?? true) ? (
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={node.action.start_maximized ?? true}
+                    disabled={readOnly}
+                    onChange={(e) =>
+                      patchActionDraft(
+                        patchBrowserNavigate(node.action!, {
+                          start_maximized: e.target.checked,
+                        }),
+                      )
+                    }
+                    onBlur={commitDraft}
+                  />
+                  Maximizar janela
+                </label>
+              ) : null}
+              {(node.action.show_on_screen ?? true) && (node.action.start_maximized ?? true) ? (
+                <p className="hint">
+                  A janela ocupa a área útil do monitor (barra de tarefas permanece visível).
+                </p>
+              ) : null}
             </>
           )}
 
@@ -800,6 +1010,11 @@ export function PropertiesPanel({
                 }
                 onBlur={commitDraft}
               />
+              {scalarVars.length > 0 ? (
+                <span className="hint">
+                  Use {"{name}"} — e.g. {scalarVars.slice(0, 3).map((n) => `{${n}}`).join(", ")}
+                </span>
+              ) : null}
             </label>
           )}
 
@@ -944,6 +1159,8 @@ export function PropertiesPanel({
               </label>
             </>
           )}
+
+          <LastRunValues lastRunVariables={lastRunVariables} />
 
           <hr className="palette-divider" />
           <h4 className="palette-group">On error</h4>

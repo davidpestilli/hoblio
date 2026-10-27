@@ -7,7 +7,7 @@ use hoblio_model::{
     ControlKind, EdgePort, ErrorHandling, FlowProject, NodeKind, validate_project,
 };
 
-use crate::actions::execute_action;
+use crate::actions::{execute_action, snapshot_action_variables};
 use crate::cancel::{reset_run_cancel, run_cancel_requested};
 use crate::browser::BrowserContext;
 use crate::events::{RunEvent, RunOutcome};
@@ -211,9 +211,11 @@ where
                     &mut run_vars,
                     project_root,
                 )?;
+                let variables = snapshot_action_variables(action, &run_vars);
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary: summary.clone(),
+                    variables,
                 };
                 runtime_event("action_executed", &node.id, &summary);
                 events.push(executed.clone());
@@ -236,6 +238,7 @@ where
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary,
+                    variables: None,
                 };
                 events.push(executed.clone());
                 on_event(executed);
@@ -300,6 +303,7 @@ where
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary,
+                    variables: None,
                 };
                 events.push(executed.clone());
                 on_event(executed);
@@ -350,6 +354,7 @@ where
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary,
+                    variables: None,
                 };
                 events.push(executed.clone());
                 on_event(executed);
@@ -415,6 +420,7 @@ where
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary,
+                    variables: None,
                 };
                 events.push(executed.clone());
                 on_event(executed);
@@ -462,6 +468,7 @@ where
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary: "next_loop".into(),
+                    variables: None,
                 };
                 events.push(executed.clone());
                 on_event(executed);
@@ -473,6 +480,7 @@ where
                 let executed = RunEvent::ActionExecuted {
                     node_id: node.id.clone(),
                     summary: "exit_loop".into(),
+                    variables: None,
                 };
                 events.push(executed.clone());
                 on_event(executed);
