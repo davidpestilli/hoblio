@@ -27,10 +27,10 @@ mod show_message_win {
     use windows::Win32::System::LibraryLoader::GetModuleHandleW;
     use windows::Win32::UI::WindowsAndMessaging::{
         CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetMessageW,
-        PostMessageW, PostQuitMessage, RegisterClassW, ShowWindow, TranslateMessage, CS_HREDRAW,
-        CS_VREDRAW, CREATESTRUCTW, HMENU, MSG, SW_SHOW, WINDOW_EX_STYLE, WM_CLOSE,
-        WM_COMMAND, WM_CREATE, WM_DESTROY, WNDCLASSW, WS_CHILD, WS_OVERLAPPED, WS_VISIBLE,
-        WS_CAPTION, WS_SYSMENU,
+        PostMessageW, PostQuitMessage, RegisterClassW, SetForegroundWindow, ShowWindow,
+        TranslateMessage, CS_HREDRAW, CS_VREDRAW, CREATESTRUCTW, HMENU, MSG, SW_SHOW,
+        WINDOW_EX_STYLE, WM_CLOSE, WM_COMMAND, WM_CREATE, WM_DESTROY, WNDCLASSW, WS_CHILD,
+        WS_OVERLAPPED, WS_VISIBLE, WS_CAPTION, WS_SYSMENU,
     };
     use windows::core::PCWSTR;
 
@@ -38,6 +38,7 @@ mod show_message_win {
     const ID_BTN_CLOSE: i32 = 1001;
     const ID_STATIC_TEXT: i32 = 1002;
     const BTN_CLOSE: PCWSTR = windows::core::w!("Fechar");
+    const WS_EX_TOPMOST: u32 = 0x00000008;
 
     struct DialogParams {
         title: Vec<u16>,
@@ -140,7 +141,7 @@ mod show_message_win {
 
             let params_ptr = Box::into_raw(Box::new(params));
             let hwnd = CreateWindowExW(
-                WINDOW_EX_STYLE::default(),
+                WINDOW_EX_STYLE(WS_EX_TOPMOST),
                 CLASS_NAME,
                 PCWSTR::from_raw((*params_ptr).title.as_ptr()),
                 WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
@@ -159,6 +160,7 @@ mod show_message_win {
             let _ = Box::from_raw(params_ptr);
 
             let _ = ShowWindow(hwnd, SW_SHOW);
+            let _ = SetForegroundWindow(hwnd);
 
             if let Some(secs) = timeout {
                 let hwnd_raw = hwnd.0 as isize;

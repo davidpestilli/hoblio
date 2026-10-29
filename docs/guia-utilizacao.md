@@ -106,7 +106,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\eval-flow-control.ps
 
 | Ação | Parâmetros |
 |------|------------|
-| `show_message` | `title`, `text`, `timeout_seconds` (opcional) |
+| `show_message` | `title`, `text`, `timeout_seconds` (opcional). No Windows a janela abre **sempre na frente** (útil após `browser_navigate`). |
 
 ### Navegador (Chrome/Edge via CDP)
 

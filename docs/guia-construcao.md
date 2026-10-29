@@ -212,7 +212,7 @@ Detalhes: [slice 4](mvp/fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEa
 |------|---------|
 | `model.ts` → `patchBrowserDomAction` | Patches parciais em ações DOM (`browser_fill`, `browser_click`, `browser_wait_for`, `browser_get_text`) **preservam** `selector` e `timeout_ms` ao editar outro campo no painel (ex.: preencher **Text** não apaga mais o **CSS selector**). |
 | `workspaceSession.ts` + `App.tsx` | Sessão de trabalho em `sessionStorage` (`hoblio-studio-workspace-v1`): grava ao ocultar aba (`visibilitychange`) ou `pagehide`; restaura projeto, pasta e digest de “salvo” na abertura — mitiga perda do diagrama quando o WebView/navegador recarrega (dev, aba descartada). Persiste também após Open / Save / Limpar fluxo. |
-| `hoblio-runtime` → `show_message.rs` | **`ShowMessage` bloqueante** (mesmo padrão de `show_get_user_input`): sem `timeout_seconds` o fluxo espera **Fechar** ou o X; com timer > 0 a janela fecha sozinha e só então a execução continua. API interna: `run_show_message` (substitui `spawn_show_message` em thread separada). |
+| `hoblio-runtime` → `show_message.rs` | **`ShowMessage` bloqueante** (mesmo padrão de `show_get_user_input`): sem `timeout_seconds` o fluxo espera **Fechar** ou o X; com timer > 0 a janela fecha sozinha e só então a execução continua. API interna: `run_show_message`. Janela criada com **`WS_EX_TOPMOST`** e **`SetForegroundWindow`** após `ShowWindow`, para aparecer na frente do Chromium aberto por `browser_navigate` (equivalente fixo ao `topmost` opcional de `show_get_user_input`). |
 
 ### Variáveis no Studio (PAD-style)
 
