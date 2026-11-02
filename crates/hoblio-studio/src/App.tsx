@@ -54,15 +54,6 @@ function isRunCancelledMessage(message: string): boolean {
   return lower.includes("cancelled by user") || lower.includes("run cancelled");
 }
 
-function projectWithClearedFlow(base: FlowProject): FlowProject {
-  const blank = defaultProject();
-  return {
-    ...base,
-    flow: blank.flow,
-    variables: {},
-  };
-}
-
 const restoredWorkspace = readWorkspaceSession();
 
 export default function App() {
@@ -194,26 +185,33 @@ export default function App() {
   );
 
   const hasUnsavedChanges = useCallback((): boolean => {
-    const viewProject = viewProjectForEditorKey(activeEditorKey);
-    if (!viewProject) return true;
+    const viewProject =
+      viewProjectForEditorKey(activeEditorKey) ??
+      ({
+        ...project,
+        flow: editor.toFlowGraph(),
+        variables,
+      } satisfies FlowProject);
     const saved = savedDigestRef.current[activeEditorKey];
     if (!saved) return true;
     return editorDigest(viewProject, activeEditorKey) !== saved;
-  }, [activeEditorKey, viewProjectForEditorKey]);
+  }, [activeEditorKey, editor, project, variables, viewProjectForEditorKey]);
 
   const dirtyFlowPaths = useMemo(() => {
     const dirty = new Set<string>();
-    const viewProject = viewProjectForEditorKey(activeEditorKey);
-    if (!viewProject) {
-      dirty.add(activeEditorKey);
-      return dirty;
-    }
+    const viewProject =
+      viewProjectForEditorKey(activeEditorKey) ??
+      ({
+        ...project,
+        flow: editor.toFlowGraph(),
+        variables,
+      } satisfies FlowProject);
     const digest = editorDigest(viewProject, activeEditorKey);
     if (savedDigestRef.current[activeEditorKey] !== digest) {
       dirty.add(activeEditorKey);
     }
     return dirty;
-  }, [activeEditorKey, editor.nodes, editor.edges, variables, viewProjectForEditorKey]);
+  }, [activeEditorKey, editor, editor.nodes, editor.edges, project, variables, viewProjectForEditorKey]);
 
   const activeSubflowId = useMemo(() => {
     const t = parseEditorKey(activeEditorKey);
@@ -237,6 +235,24 @@ export default function App() {
   projectDirRef.current = projectDir;
   const activeEditorKeyRef = useRef(activeEditorKey);
   activeEditorKeyRef.current = activeEditorKey;
+
+  useEffect(() => {
+    if (restoredWorkspace) {
+      return;
+    }
+    try {
+      const baseline: FlowProject = {
+        ...project,
+        flow: editor.toFlowGraph(),
+        variables,
+      };
+      markSaved(baseline, activeEditorKey);
+    } catch {
+      markSaved(project, activeEditorKey);
+    }
+    // Baseline digest for a new unsaved session (avoids false "unsaved" on Open).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once at launch
+  }, []);
 
   useEffect(() => {
     const persist = () => {
@@ -564,19 +580,33 @@ export default function App() {
     }
     try {
       const proceed = await confirm(
-        "Remover todos os nós e conexões do fluxo e limpar as variáveis do projeto? O diagrama ficará apenas com Start e End.",
+        "Remover todos os nós e conexões do fluxo e limpar as variáveis do projeto? O canvas ficará vazio.",
         { title: "Limpar fluxo", kind: "warning" },
       );
       if (!proceed) {
         return;
       }
-      const current = syncProjectFromCanvas();
-      const cleared = projectWithClearedFlow(current);
+      const cleared = defaultProject();
+      const entry = entryFlowPath(cleared.manifest);
+      const emptyDoc: FlowDocument = {
+        graph: { ...cleared.flow, subflows: undefined },
+        variables: {},
+      };
+      flowCacheRef.current = { [entry]: emptyDoc };
+      docUndoRef.current = [];
+      savedDigestRef.current = {};
+      setFlowTabs([]);
+      setSubflowTabIds([]);
+      setActiveEditorKey(entry);
+      setLogLines([]);
+      setLastRunVariablesByNode({});
+      setActiveNodeId(null);
       setProject(cleared);
       setProjectDir(null);
-      editor.loadProject(cleared);
       setVariables({});
       setSelectedId(null);
+      editor.loadProject(cleared);
+      markSaved(cleared, entry);
       persistWorkspace();
       setOkStatus("Fluxo limpo — escolha a pasta no Save (não sobrescreve o projeto anterior)");
     } catch (e) {
@@ -840,6 +870,12 @@ export default function App() {
         <aside className="panel palette">
           <h3>Palette</h3>
           <h4 className="palette-group">Utilitários</h4>
+          <button type="button" onClick={() => editor.addStartNode()}>
+            Start node
+          </button>
+          <button type="button" onClick={() => editor.addEndNode()}>
+            End node
+          </button>
           <button type="button" onClick={() => addAction("log")}>
             Log
           </button>
@@ -933,10 +969,6 @@ export default function App() {
           </button>
           <button type="button" onClick={() => editor.addControlNode("exit_loop")}>
             Exit loop
-          </button>
-          <hr className="palette-divider" />
-          <button type="button" onClick={() => editor.addEndNode()}>
-            End node
           </button>
         </aside>
         <div className="canvas">

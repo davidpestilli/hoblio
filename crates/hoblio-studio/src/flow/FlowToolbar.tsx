@@ -95,7 +95,7 @@ export function FlowToolbar({ controller, onClearFlow }: FlowToolbarProps) {
               <ToolButton
                 label="Limpar fluxo"
                 onClick={onClearFlow}
-                title="Remove todo o diagrama e variáveis; mantém Start e End"
+                title="Remove todo o diagrama e variáveis (canvas vazio)"
               />
             ) : null}
           </div>

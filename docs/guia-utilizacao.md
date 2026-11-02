@@ -26,14 +26,14 @@ npm run tauri dev
 
 1. **Open** — selecione uma **pasta** de projeto (ex.: `examples\flow-control-demo`). Se houver alterações não salvas, o app pede confirmação antes de trocar de projeto.
 2. No canvas, use **Edição** (barra acima do diagrama):
-   - **Paleta** (esquerda): ações, **If**, **For each**, **Next loop**, **Exit loop**, nó **End**.
+   - **Paleta** (esquerda): **Start node** e **End node** (grupo **Utilitários**), ações, **If**, loops (**For each**, **While**, **Repeat**, **Next loop**, **Exit loop**), **Run flow** / **New subflow**.
    - **Conexões:** arraste de conector de saída para entrada; nós If/ForEach usam portas **then/else** ou **body/after** (rótulos no nó).
    - Conexões inválidas (self-loop, ligar em Start, sair de End) mostram mensagem na barra de status.
    - **Selecionar** nó ou aresta; **Delete** / **Backspace** remove (Start não apaga).
    - **Religar** aresta no modo Edição.
    - **Tracado:** aresta selecionada → **+** no segmento; waypoints.
    - **Desfazer / Refazer** (toolbar ou **Ctrl+Z** / **Ctrl+Shift+Z**).
-   - **Limpar fluxo** — repõe o diagrama a Start + End (uma ligação), zera **Project variables**; pede confirmação; **desassocia a pasta aberta** (o próximo **Save** pede destino de novo, para não sobrescrever o projeto anterior por engano).
+   - **Limpar fluxo** — canvas **vazio** (como sessão nova), zera **Project variables**, **Run log**, abas de subfluxo e lista **Embedded subflows**; pede confirmação; **desassocia a pasta aberta** (o próximo **Save** pede destino de novo, para não sobrescrever o projeto anterior por engano).
 3. **Painel Properties** (direita): parâmetros do nó selecionado; **Delete node** no modo Edição.
 4. **Sem nó selecionado:** **Project variables** — seções **Variables** e **Lists** (ou **Advanced JSON**); listas para For each, escalares (ex. `flag`) para If.
 5. **Validate** — `validate_project` (grafo + variáveis); erros em vermelho na barra.

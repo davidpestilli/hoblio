@@ -50,16 +50,11 @@ export function graphToSubflowBundle(graph: FlowGraph, variables: Record<string,
   };
 }
 
-export function defaultSubflowBundle(subflowId: string): SubflowBundle {
-  const start = `${subflowId}_start`;
-  const end = `${subflowId}_end`;
+export function defaultSubflowBundle(_subflowId: string): SubflowBundle {
   return {
-    start,
-    nodes: [
-      { id: start, kind: "start", label: "Start", ui: { x: 80, y: 120 } },
-      { id: end, kind: "end", label: "End", ui: { x: 420, y: 120 } },
-    ],
-    edges: [{ from: start, to: end }],
+    start: "",
+    nodes: [],
+    edges: [],
     variables: {},
   };
 }

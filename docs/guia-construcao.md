@@ -184,23 +184,25 @@ Implementação em `crates/hoblio-studio/src/flow/` (React Flow 12), inspirada n
 | `useFlowEditor.ts` | Canvas, undo/redo, multi-port connect, grade de spawn (controles/ações), `onConnectEnd` (feedback), Stop/cancel no run |
 | `FlowCanvas.tsx` | React Flow, guias de alinhamento, tecla Delete |
 | `FlowToolbar.tsx` | Exibição/Edição, desfazer/refazer, **Limpar fluxo**, apagar seleção, rótulo da aresta selecionada |
-| `App.tsx` | **`clearFlow`**: diálogo de confirmação → `projectWithClearedFlow` (grafo mínimo Start–End de `defaultProject()`, `variables: {}`), mantém `manifest`, **zera `projectDir`**; `editor.loadProject`; indisponível durante **Run** |
+| `App.tsx` | **`clearFlow`**: diálogo → `defaultProject()` (canvas **vazio**), zera cache (`flowCacheRef`), abas (`flowTabs` / `subflowTabIds`), **Run log**, variáveis da última execução, undo de documento; volta ao editor **`flow.json`**; **zera `projectDir`**; `markSaved` + sessão; indisponível durante **Run** |
+| `model.ts` | **`defaultProject()`**: grafo vazio (`start: ""`, sem nós/arestas); Start/End passam a ser inseridos pela paleta |
+| `useFlowEditor.ts` | **`addStartNode`** (um Start por fluxo) + **`addEndNode`** |
 | `WaypointEdge.tsx` | Tracado com pontos de passagem |
 | `flowConvert.ts` | Conversão `flow.json` ↔ nós/arestas do React Flow; arestas de loop não ganham `ui.sourceHandle` redundante quando já existe `port` (digest / dirty state) |
 
-**Inserção na paleta:** `spawnPosition` — grade 4×200 px; contadores **separados** para controles (`y≈240`) e ações (`y≈400`); nó **End** padrão em `(720, 120)` para não colidir com Repeat/While num canvas limpo.
+**Inserção na paleta:** `spawnPosition` — grade 4×200 px; contadores **separados** para controles (`y≈240`) e ações (`y≈400`). **Start** em `(80, 120)` e **End** em `(520, 120)` ao adicionar pela paleta.
 
-**Grupos da paleta** (`App.tsx`, classe `palette-group` em `styles.css`; separadores `palette-divider` antes de Variables e do **End node**):
+**Grupos da paleta** (`App.tsx`, classe `palette-group` em `styles.css`; separadores `palette-divider` antes de Variables e Fluxos):
 
 | Grupo | Itens |
 |-------|--------|
-| **Utilitários** | Log, NoOp, Delay, HttpGet, ShowMessage |
+| **Utilitários** | **Start node**, **End node**, Log, NoOp, Delay, HttpGet, ShowMessage, ShowGetUserInput |
 | **Arquivos** | FileWrite, FileAppend, FileRead |
 | **Browser** | BrowserNavigate, BrowserClick, Wait navigation, BrowserFill, BrowserWaitFor, BrowserGetText |
 | **Variables** | Set variable, Increase/Decrease variable, List clear, List append |
+| **Fluxos** | Run flow, New subflow |
 | **Condicionais** | If (nó de controle) |
 | **Loops** | For each, While, Repeat N times, Next loop, Exit loop |
-| *(após divisor)* | **End node** |
 
 Todas as variantes executáveis de `ActionKind` expostas no Studio estão em Utilitários, Arquivos ou Browser; listas e variáveis numéricas ficam em **Variables**.
 
@@ -213,6 +215,17 @@ Detalhes: [slice 4](mvp/fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEa
 | `model.ts` → `patchBrowserDomAction` | Patches parciais em ações DOM (`browser_fill`, `browser_click`, `browser_wait_for`, `browser_get_text`) **preservam** `selector` e `timeout_ms` ao editar outro campo no painel (ex.: preencher **Text** não apaga mais o **CSS selector**). |
 | `workspaceSession.ts` + `App.tsx` | Sessão de trabalho em `sessionStorage` (`hoblio-studio-workspace-v1`): grava ao ocultar aba (`visibilitychange`) ou `pagehide`; restaura projeto, pasta e digest de “salvo” na abertura — mitiga perda do diagrama quando o WebView/navegador recarrega (dev, aba descartada). Persiste também após Open / Save / Limpar fluxo. |
 | `hoblio-runtime` → `show_message.rs` | **`ShowMessage` bloqueante** (mesmo padrão de `show_get_user_input`): sem `timeout_seconds` o fluxo espera **Fechar** ou o X; com timer > 0 a janela fecha sozinha e só então a execução continua. API interna: `run_show_message`. Janela criada com **`WS_EX_TOPMOST`** e **`SetForegroundWindow`** após `ShowWindow`, para aparecer na frente do Chromium aberto por `browser_navigate` (equivalente fixo ao `topmost` opcional de `show_get_user_input`). |
+
+### Studio — canvas vazio, ícone e limpar fluxo (nov/2026)
+
+| Peça | Mudança |
+|------|---------|
+| `defaultProject()` / `defaultSubflowBundle()` | Sessão e subfluxos novos começam com canvas **sem nós**; o fluxo válido exige **Start** + **End** (e ligações) inseridos pela paleta (**Utilitários**). |
+| `App.tsx` | Digest “salvo” na abertura de sessão nova + fallback em `hasUnsavedChanges` / `dirtyFlowPaths` quando ainda não há `flowCache` — evita falso **Unsaved changes** ao **Open** sem editar. |
+| `App.tsx` → **`clearFlow`** | Além do canvas, limpa **embedded subflows** (cache + painel), abas **Entry** / subfluxo, **Run log** e estado de execução; repõe `defaultProject()` (não mantém manifest do projeto aberto). |
+| `src-tauri/icons/` | Ícone do app gerado com `npx tauri icon` a partir de `source-domestic_elf.webp`; `tauri.conf.json` referencia `icon.png` + `icon.ico`. |
+| `src-tauri/build.rs` | `cargo:rerun-if-changed` em `icons/*` — trocar ícone **recompila** o binário (ícone fica embutido no `.exe`; reiniciar o dev server sem `cargo build` mantém o ícone antigo). |
+| `public/favicon.png` + `index.html` | Favicon no Vite quando o front roda só no browser. |
 
 ### Variáveis no Studio (PAD-style)
 
@@ -255,7 +268,13 @@ cd crates/hoblio-studio
 npm run build   # tsc --noEmit && vite build
 ```
 
-Ícone Tauri (`src-tauri/icons/icon.png`) deve ser **RGBA** (build Linux/macOS).
+Ícone Tauri (`src-tauri/icons/icon.png`) deve ser **RGBA** (build Linux/macOS). Regenerar a partir da fonte:
+
+```powershell
+cd crates/hoblio-studio
+npx tauri icon src-tauri/icons/source-domestic_elf.webp -o src-tauri/icons
+cargo build -p hoblio-studio
+```
 
 ---
 

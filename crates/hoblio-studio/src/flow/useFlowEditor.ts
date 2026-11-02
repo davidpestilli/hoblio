@@ -121,6 +121,7 @@ export interface FlowEditorController {
   addControlNode: (
     kind: Extract<NodeKind, "if" | "for_each" | "while_loop" | "repeat" | "next_loop" | "exit_loop">,
   ) => void;
+  addStartNode: () => void;
   addEndNode: () => void;
   deleteSelection: () => void;
   deleteNode: (nodeId: string) => void;
@@ -573,6 +574,32 @@ export function useFlowEditor(
     [commitHistory, setNodes],
   );
 
+  const addStartNode = useCallback(() => {
+    const { nodes: currentNodes } = snapshotRef.current;
+    if (currentNodes.some((n) => n.data.flowNode.kind === "start")) {
+      onConnectionRejected?.("Flow already has a Start node");
+      return;
+    }
+    const id = currentNodes.some((n) => n.id === "start")
+      ? `start_${Date.now().toString(36)}`
+      : "start";
+    setStart(id);
+    const flowNode: FlowNode = {
+      id,
+      kind: "start",
+      label: "Start",
+      ui: { x: 80, y: 120 },
+    };
+    const node: HoblioFlowNode = {
+      id,
+      type: "hoblio",
+      position: { x: 80, y: 120 },
+      data: { flowNode },
+    };
+    setNodes((current) => [...current, node]);
+    commitHistory();
+  }, [commitHistory, onConnectionRejected, setNodes]);
+
   const addEndNode = useCallback(() => {
     const id = `end_${Date.now().toString(36)}`;
     const flowNode: FlowNode = {
@@ -692,6 +719,7 @@ export function useFlowEditor(
     addAction,
     applyVariableRename,
     addControlNode,
+    addStartNode,
     addEndNode,
     deleteSelection,
     deleteNode,
