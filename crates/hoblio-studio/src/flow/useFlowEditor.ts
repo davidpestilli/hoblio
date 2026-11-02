@@ -22,6 +22,12 @@ import {
 import type { ActionKind, FlowGraph, FlowNode, FlowProject, NodeKind } from "../model";
 import { collectTakenVariableNames, renameVariableInFlowNodes } from "../flowVariables";
 import { defaultAction, defaultControl } from "../model";
+import {
+  applyFragmentToCanvas,
+  fragmentFromCanvas,
+  readFragmentFromClipboard,
+  writeFragmentToClipboard,
+} from "./flowClipboard";
 import type { HoblioFlowEdge, HoblioFlowNode } from "./flowTypes";
 import { newEdgeId } from "./flowTypes";
 import type { Waypoint } from "../model";
@@ -126,6 +132,9 @@ export interface FlowEditorController {
   deleteSelection: () => void;
   deleteNode: (nodeId: string) => void;
   updateFlowNode: (flowNode: FlowNode, options?: { recordHistory?: boolean }) => void;
+  copySelection: () => boolean;
+  cutSelection: () => boolean;
+  pasteSelection: () => Promise<boolean>;
 }
 
 export function useFlowEditor(
@@ -686,6 +695,50 @@ export function useFlowEditor(
     commitHistory();
   }, [commitHistory, setEdges, setNodes]);
 
+  const copySelection = useCallback(() => {
+    if (!editing) {
+      return false;
+    }
+    const { nodes: currentNodes, edges: currentEdges } = snapshotRef.current;
+    const fragment = fragmentFromCanvas(currentNodes, currentEdges);
+    if (!fragment) {
+      return false;
+    }
+    void writeFragmentToClipboard(fragment);
+    return true;
+  }, [editing]);
+
+  const cutSelection = useCallback(() => {
+    if (!copySelection()) {
+      return false;
+    }
+    deleteSelection();
+    return true;
+  }, [copySelection, deleteSelection]);
+
+  const pasteSelection = useCallback(async () => {
+    if (!editing) {
+      return false;
+    }
+    const fragment = await readFragmentFromClipboard();
+    if (!fragment) {
+      return false;
+    }
+    const { nodes: currentNodes, edges: currentEdges } = snapshotRef.current;
+    const applied = applyFragmentToCanvas(fragment, currentNodes, currentEdges);
+    if (!applied) {
+      return false;
+    }
+    if (applied.newStart) {
+      setStart(applied.newStart);
+    }
+    setNodes(applied.nodes);
+    setEdges(applied.edges);
+    setSelectedEdgeId(null);
+    commitHistory();
+    return true;
+  }, [commitHistory, editing, setEdges, setNodes]);
+
   const canUndo = history.index > 0;
   const canRedo = history.index < history.items.length - 1;
 
@@ -724,5 +777,8 @@ export function useFlowEditor(
     deleteSelection,
     deleteNode,
     updateFlowNode,
+    copySelection,
+    cutSelection,
+    pasteSelection,
   };
 }

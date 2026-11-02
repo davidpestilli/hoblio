@@ -784,6 +784,29 @@ export default function App() {
         } else if (!restoreDocUndo()) {
           editor.undo();
         }
+        return;
+      }
+      if (ev.ctrlKey && ev.key.toLowerCase() === "c") {
+        if (editor.copySelection()) {
+          ev.preventDefault();
+          setOkStatus("Copied selection");
+        }
+        return;
+      }
+      if (ev.ctrlKey && ev.key.toLowerCase() === "x") {
+        if (editor.cutSelection()) {
+          ev.preventDefault();
+          setOkStatus("Cut selection");
+        }
+        return;
+      }
+      if (ev.ctrlKey && ev.key.toLowerCase() === "v") {
+        ev.preventDefault();
+        void editor.pasteSelection().then((ok) => {
+          if (ok) {
+            setOkStatus("Pasted selection");
+          }
+        });
       }
     };
     window.addEventListener("keydown", onKeyDown);

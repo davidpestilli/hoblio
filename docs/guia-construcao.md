@@ -181,10 +181,11 @@ Implementação em `crates/hoblio-studio/src/flow/` (React Flow 12), inspirada n
 
 | Módulo | Função |
 |--------|--------|
-| `useFlowEditor.ts` | Canvas, undo/redo, multi-port connect, grade de spawn (controles/ações), `onConnectEnd` (feedback), Stop/cancel no run |
+| `useFlowEditor.ts` | Canvas, undo/redo, multi-port connect, grade de spawn (controles/ações), `onConnectEnd` (feedback), **copiar/recortar/colar** seleção, Stop/cancel no run |
+| `flowClipboard.ts` | Fragmento `hoblio-flow-clipboard:v1:` (JSON), buffer em memória para colar entre abas Entry/subfluxo, remapeamento de ids ao colar |
 | `FlowCanvas.tsx` | React Flow, guias de alinhamento, tecla Delete |
 | `FlowToolbar.tsx` | Exibição/Edição, desfazer/refazer, **Limpar fluxo**, apagar seleção, rótulo da aresta selecionada |
-| `App.tsx` | **`clearFlow`**: diálogo → `defaultProject()` (canvas **vazio**), zera cache (`flowCacheRef`), abas (`flowTabs` / `subflowTabIds`), **Run log**, variáveis da última execução, undo de documento; volta ao editor **`flow.json`**; **zera `projectDir`**; `markSaved` + sessão; indisponível durante **Run** |
+| `App.tsx` | Atalhos **Ctrl+C / Ctrl+X / Ctrl+V** (fora de campos de texto); **`clearFlow`**: diálogo → `defaultProject()` (canvas **vazio**), zera cache (`flowCacheRef`), abas (`flowTabs` / `subflowTabIds`), **Run log**, variáveis da última execução, undo de documento; volta ao editor **`flow.json`**; **zera `projectDir`**; `markSaved` + sessão; indisponível durante **Run** |
 | `model.ts` | **`defaultProject()`**: grafo vazio (`start: ""`, sem nós/arestas); Start/End passam a ser inseridos pela paleta |
 | `useFlowEditor.ts` | **`addStartNode`** (um Start por fluxo) + **`addEndNode`** |
 | `WaypointEdge.tsx` | Tracado com pontos de passagem |
@@ -226,6 +227,19 @@ Detalhes: [slice 4](mvp/fase-mvp-slice4-flow-editor.md) · [slice 5 — If/ForEa
 | `src-tauri/icons/` | Ícone do app gerado com `npx tauri icon` a partir de `source-domestic_elf.webp`; `tauri.conf.json` referencia `icon.png` + `icon.ico`. |
 | `src-tauri/build.rs` | `cargo:rerun-if-changed` em `icons/*` — trocar ícone **recompila** o binário (ícone fica embutido no `.exe`; reiniciar o dev server sem `cargo build` mantém o ícone antigo). |
 | `public/favicon.png` + `index.html` | Favicon no Vite quando o front roda só no browser. |
+
+### Studio — copiar/colar trechos (nov/2026)
+
+O **React Flow 12** não traz copiar/colar de nós; **Ctrl+C** no canvas copiava só o texto da atribuição “React Flow”. O Studio implementa clipboard próprio:
+
+| Peça | Comportamento |
+|------|----------------|
+| **`flowClipboard.ts`** | Serializa nós + arestas selecionados; prefixo `hoblio-flow-clipboard:v1:` em `text/plain` (Tauri `writeText` / `readText` + fallback `navigator.clipboard`); **buffer em sessão** para colar na aba Entry ou **⎇ subfluxo** sem depender só do SO. |
+| **`useFlowEditor`** | `copySelection`, `cutSelection` (Start não entra no recorte), `pasteSelection` — ids novos, deslocamento (+40,+40), arestas internas; se o destino já tem **Start**, nós Start copiados são omitidos e arestas que saíam deles ligam no Start existente. |
+| **`App.tsx`** | Atalhos globais quando o foco não está em input/textarea; barra de status “Copied/Cut/Pasted selection”. |
+| **Tauri** | `clipboard-manager:allow-read-text` e `allow-write-text` em `capabilities/default.json`. |
+
+Uso típico: selecionar trecho no fluxo principal → **Ctrl+C** → abrir aba do subfluxo → **Ctrl+V**. Ver também [guia de utilização §2](guia-utilizacao.md).
 
 ### Variáveis no Studio (PAD-style)
 
@@ -423,6 +437,7 @@ Rodadas documentadas em [avaliacao/relatorios/2026-10-26/](avaliacao/relatorios/
 | **B5** | Log / browser | Filtro `chromiumoxide=error`; pausa no shutdown do browser |
 | **N1** | Studio | **Limpar fluxo** zera `projectDir` — Save pede pasta de novo |
 | **N2** | Studio | `flowToGraph`: não persistir `ui.sourceHandle` quando `port` já descreve a aresta (evita “Unsaved changes” falso) |
+| **N7** | Studio | **Ctrl+C/X/V** — `flowClipboard.ts`, colar entre Entry e subfluxo; permissões clipboard Tauri |
 | **N3** | CLI | Ação **Log** não chama `println!` — uma linha `log: …` via listener |
 | **N4** | Repo | Após `npm run build` (T-F01), commitar `crates/hoblio-studio/dist/index.html` se o hash do bundle mudar |
 

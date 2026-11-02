@@ -33,6 +33,7 @@ npm run tauri dev
    - **Religar** aresta no modo Edição.
    - **Tracado:** aresta selecionada → **+** no segmento; waypoints.
    - **Desfazer / Refazer** (toolbar ou **Ctrl+Z** / **Ctrl+Shift+Z**).
+   - **Copiar / Recortar / Colar** (**Ctrl+C**, **Ctrl+X**, **Ctrl+V**) — trecho selecionado (nós e arestas entre eles); funciona entre a aba **Entry** e abas **⎇ subfluxo** do mesmo projeto. O **Start** não é removido no recorte; ao colar num fluxo que já tem Start, o Start copiado é ignorado e ligações que vinham dele passam pelo Start do destino. No `.txt`, o clipboard mostra JSON com prefixo `hoblio-flow-clipboard:v1:` (não use “React Flow” como indicador de cópia).
    - **Limpar fluxo** — canvas **vazio** (como sessão nova), zera **Project variables**, **Run log**, abas de subfluxo e lista **Embedded subflows**; pede confirmação; **desassocia a pasta aberta** (o próximo **Save** pede destino de novo, para não sobrescrever o projeto anterior por engano).
 3. **Painel Properties** (direita): parâmetros do nó selecionado; **Delete node** no modo Edição.
 4. **Sem nó selecionado:** **Project variables** — seções **Variables** e **Lists** (ou **Advanced JSON**); listas para For each, escalares (ex. `flag`) para If.
