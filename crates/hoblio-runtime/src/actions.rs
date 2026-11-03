@@ -56,7 +56,10 @@ pub fn execute_action(
             wait_ms,
             show_on_screen,
             start_maximized,
-        } => browser.navigate(url, *wait_ms, *show_on_screen, *start_maximized),
+        } => {
+            let url = interpolate(url, vars)?;
+            browser.navigate(&url, *wait_ms, *show_on_screen, *start_maximized)
+        }
         ActionKind::BrowserClick {
             selector,
             timeout_ms,

@@ -2,6 +2,13 @@
   "edges": [
     {
       "from": "start",
+      "to": "action_mw1pickenv",
+      "ui": {
+        "targetHandle": "left"
+      }
+    },
+    {
+      "from": "action_mw1pickenv",
       "to": "action_mvzu4odw",
       "ui": {
         "targetHandle": "left"
@@ -10,13 +17,6 @@
     {
       "from": "action_mvzu4odw",
       "to": "action_mvzu49l8",
-      "ui": {
-        "targetHandle": "left"
-      }
-    },
-    {
-      "from": "action_s2i6xjei",
-      "to": "action_mvzudsb7",
       "ui": {
         "targetHandle": "left"
       }
@@ -42,14 +42,6 @@
       "to": "action_mvsnv0r6",
       "ui": {
         "targetHandle": "bottom"
-      }
-    },
-    {
-      "from": "if_mvqgu2sc",
-      "port": "else",
-      "to": "action_mvzwoqkh",
-      "ui": {
-        "targetHandle": "top"
       }
     },
     {
@@ -99,6 +91,28 @@
       }
     },
     {
+      "from": "action_s2i6xjei",
+      "to": "action_mw108qvx",
+      "ui": {
+        "targetHandle": "left"
+      }
+    },
+    {
+      "from": "action_mw108qvx",
+      "to": "action_mvzudsb7",
+      "ui": {
+        "targetHandle": "left"
+      }
+    },
+    {
+      "from": "action_mvzsy16v",
+      "to": "action_mvzwoqkh",
+      "ui": {
+        "sourceHandle": "bottom",
+        "targetHandle": "top"
+      }
+    },
+    {
       "from": "if_mvzu74tg_nz5i",
       "port": "else",
       "to": "action_mvzwoqkh",
@@ -107,10 +121,10 @@
       }
     },
     {
-      "from": "action_mvzsy16v",
+      "from": "if_mvqgu2sc",
+      "port": "else",
       "to": "action_mvzwoqkh",
       "ui": {
-        "sourceHandle": "bottom",
         "targetHandle": "top"
       }
     }
@@ -132,6 +146,20 @@
       "ui": {
         "x": 100.0,
         "y": 600.0
+      }
+    },
+    {
+      "action": {
+        "flow_id": "pick_environment",
+        "type": "run_flow",
+        "variable_scope": "inherit"
+      },
+      "id": "action_mw1pickenv",
+      "kind": "action",
+      "label": "Escolhe ambiente",
+      "ui": {
+        "x": -320.0,
+        "y": -310.0
       }
     },
     {
@@ -167,7 +195,7 @@
     },
     {
       "action": {
-        "text": "{BrowserText2}",
+        "text": "Painel do Advogado",
         "title": "Hoblio",
         "type": "show_message"
       },
@@ -204,7 +232,7 @@
       "kind": "action",
       "label": "Verifica para qual tela foi",
       "ui": {
-        "x": -60.0,
+        "x": 100.0,
         "y": -310.0
       }
     },
@@ -226,14 +254,14 @@
     {
       "action": {
         "type": "browser_navigate",
-        "url": "https://eproc-1g-sp-hml.tjsp.jus.br/",
+        "url": "{EprocUrl}",
         "wait_ms": 2000
       },
       "id": "action_mvzu4odw",
       "kind": "action",
-      "label": "Vai para eproc.hml",
+      "label": "Abre eproc",
       "ui": {
-        "x": -299.0,
+        "x": -120.0,
         "y": -310.0
       }
     },
@@ -241,8 +269,8 @@
       "control": {
         "ignore_case": true,
         "left": "{BrowserText2}",
-        "operator": "eq",
-        "right": "Seleção de perfil",
+        "operator": "contains",
+        "right": "Código",
         "type": "if"
       },
       "id": "if_mvzu74tg_nz5i",
@@ -255,16 +283,34 @@
     },
     {
       "action": {
-        "selector": "h1",
-        "timeout_ms": 10000,
+        "type": "set_variable",
+        "value": "",
+        "variable": "BrowserText2"
+      },
+      "id": "action_mw108qvx",
+      "kind": "action",
+      "label": "Limpa BrowserText2",
+      "ui": {
+        "x": -20.0,
+        "y": -152.5
+      }
+    },
+    {
+      "action": {
+        "selector": "#kc-otp-login-form > div:nth-child(1) > div:nth-child(1) > label",
+        "timeout_ms": 3000,
         "type": "browser_get_text",
         "variable": "BrowserText2"
+      },
+      "error_handling": {
+        "on_failure": "continue",
+        "retry_count": 0
       },
       "id": "action_mvzudsb7",
       "kind": "action",
       "label": "Verifica para qual tela foi",
       "ui": {
-        "x": -20.0,
+        "x": 200.0,
         "y": -152.5
       }
     },
@@ -286,10 +332,14 @@
     },
     {
       "action": {
-        "selector": "h1",
-        "timeout_ms": 10000,
+        "selector": "#divInfraBarraLocalizacao > div > h1",
+        "timeout_ms": 3000,
         "type": "browser_get_text",
         "variable": "BrowserText3"
+      },
+      "error_handling": {
+        "on_failure": "continue",
+        "retry_count": 0
       },
       "id": "action_mvzwoqkh",
       "kind": "action",
@@ -352,7 +402,7 @@
         {
           "action": {
             "selector": "#username",
-            "text": "WS-DSDP",
+            "text": "{EprocUser}",
             "timeout_ms": 1000,
             "type": "browser_fill"
           },
@@ -499,6 +549,192 @@
       ],
       "start": "start",
       "variables": {}
+    },
+    "pick_environment": {
+      "edges": [
+        {
+          "from": "start",
+          "to": "action_mw1envask",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "action_mw1envask",
+          "to": "if_mw1envprd",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "if_mw1envprd",
+          "port": "then",
+          "to": "action_mw1prdurl",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "action_mw1prdurl",
+          "to": "action_mw1prduser",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "action_mw1prduser",
+          "to": "end_mw1pickenv",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "if_mw1envprd",
+          "port": "else",
+          "to": "action_mw1hmlurl",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "action_mw1hmlurl",
+          "to": "action_mw1hmluser",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "action_mw1hmluser",
+          "to": "end_mw1pickenv",
+          "ui": {
+            "targetHandle": "left"
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "action": {
+            "button_pressed_variable": "EprocEnvButton",
+            "default_value": "hml",
+            "input_kind": "single_line",
+            "message": "Digite hml (homologação) ou prd (produção).",
+            "title": "Ambiente eproc",
+            "topmost": true,
+            "type": "show_get_user_input",
+            "user_input_variable": "EprocEnvChoice"
+          },
+          "id": "action_mw1envask",
+          "kind": "action",
+          "label": "Pergunta ambiente",
+          "ui": {
+            "x": 0.0,
+            "y": 0.0
+          }
+        },
+        {
+          "control": {
+            "ignore_case": true,
+            "left": "{EprocEnvChoice}",
+            "operator": "contains",
+            "right": "prd",
+            "type": "if"
+          },
+          "id": "if_mw1envprd",
+          "kind": "if",
+          "label": "Produção?",
+          "ui": {
+            "x": 220.0,
+            "y": -17.0
+          }
+        },
+        {
+          "action": {
+            "type": "set_variable",
+            "value": "https://eproc1g.tjsp.jus.br/eproc/index.php",
+            "variable": "EprocUrl"
+          },
+          "id": "action_mw1prdurl",
+          "kind": "action",
+          "label": "URL produção",
+          "ui": {
+            "x": 440.0,
+            "y": 0.0
+          }
+        },
+        {
+          "action": {
+            "type": "set_variable",
+            "value": "M372152",
+            "variable": "EprocUser"
+          },
+          "id": "action_mw1prduser",
+          "kind": "action",
+          "label": "Usuário produção",
+          "ui": {
+            "x": 700.0,
+            "y": 0.0
+          }
+        },
+        {
+          "action": {
+            "type": "set_variable",
+            "value": "https://eproc-1g-sp-hml.tjsp.jus.br/",
+            "variable": "EprocUrl"
+          },
+          "id": "action_mw1hmlurl",
+          "kind": "action",
+          "label": "URL homologação",
+          "ui": {
+            "x": 440.0,
+            "y": 140.0
+          }
+        },
+        {
+          "action": {
+            "type": "set_variable",
+            "value": "WS-DSDP",
+            "variable": "EprocUser"
+          },
+          "id": "action_mw1hmluser",
+          "kind": "action",
+          "label": "Usuário homologação",
+          "ui": {
+            "x": 680.0,
+            "y": 140.0
+          }
+        },
+        {
+          "id": "start",
+          "kind": "start",
+          "label": "Start",
+          "ui": {
+            "x": -220.0,
+            "y": 0.0
+          }
+        },
+        {
+          "id": "end_mw1pickenv",
+          "kind": "end",
+          "label": "End",
+          "ui": {
+            "x": 940.0,
+            "y": 70.0
+          }
+        }
+      ],
+      "start": "start",
+      "variables": {
+        "EprocEnvChoice": "",
+        "EprocUrl": "",
+        "EprocUser": ""
+      }
     }
+  },
+  "variables": {
+    "BrowserText1": "",
+    "BrowserText2": "",
+    "BrowserText3": "",
+    "EprocUrl": "",
+    "EprocUser": ""
   }
 }

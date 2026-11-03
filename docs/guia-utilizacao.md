@@ -116,7 +116,7 @@ Ordem típica: **`browser_navigate`** primeiro; depois passos DOM na **mesma exe
 
 | Ação | Uso |
 |------|-----|
-| `browser_navigate` | Abrir URL; `wait_ms?`; `show_on_screen?` (padrão visível); `start_maximized?` (padrão maximizar janela) |
+| `browser_navigate` | Abrir URL (`url` aceita `{variavel}`); `wait_ms?`; `show_on_screen?` (padrão visível); `start_maximized?` (padrão maximizar janela) |
 | `browser_wait_for` | Esperar seletor CSS |
 | `browser_click` | Clique; opcional `wait_for_navigation`, `wait_selector_after` |
 | `browser_wait_navigation` | Esperar navegação da aba |

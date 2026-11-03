@@ -251,7 +251,7 @@ O runtime só usa `from` / `to` e a porta lógica (`main`, `then`, `else`, …).
 | **`flowConvert.ts`** | Saídas `main` pelos ids `top`, `bottom`, `left`, `right` (legado `out-top` / `out-bottom` normalizado ao abrir). Só **`right`** omitido em `ui.sourceHandle` ao salvar (default). |
 | **Validação** | Continua **uma** aresta `main` por nó; trocar o lado da saída substitui a ligação existente. |
 
-Exemplo de composição com subfluxos embutidos: `examples/login-eproc` (entry + `credentials_input` + `otp_input`).
+Exemplo de composição com subfluxos embutidos: `examples/login-eproc` — ver §4.5.1.
 
 ### Studio — fechar janela com alterações não salvas (nov/2026)
 
@@ -280,7 +280,7 @@ Sem nó selecionado, o painel direito mostra **Flow variables** (índice somente
 |--------|--------|
 | `flowVariables.ts` | `collectFlowVariableProducers`, nomes ocupados, renomear no grafo (`{nome}`), picker unificado |
 | `actionOutputDefaults.ts` | Nomes padrão ao inserir ação (`BrowserText1`, `Var1`, …) |
-| `FlowVariablesOverview.tsx` | Seção **Flow variables** no painel do canvas |
+| `FlowVariablesOverview.tsx` | Seção **Flow variables** no painel do canvas (mesmo nome pode aparecer em vários nós — último escritor na execução) |
 | `ProjectVariablesPanel.tsx` | **Variables** / **Lists** / **Advanced JSON**; chaves React estáveis por índice (evita perder foco ao digitar) |
 | `projectVariables.ts` | `partitionVariables` / `buildVariables` (ordem de inserção no objeto, sem re-sort ao editar) |
 | `PropertiesPanel.tsx` | **Output variable** em BrowserGetText e SetVariable; renomear propaga refs; If/Log/FileWrite usam seeds + produtores |
@@ -295,7 +295,7 @@ Sem nó selecionado, o painel direito mostra **Flow variables** (índice somente
 - **`ActionKind::produced_variables()`** — metadado “Variables produced” (`browser_get_text`, `set_variable`).
 - **`validate_project`**: nome inválido, `set_variable` / `file_read` / `show_get_user_input` sem nome de variável, `for_each` / `repeat` com `item_variable` / `index_variable` inválidos. **Não** exige nomes únicos por nó (várias ações podem escrever na mesma variável).
 
-**Runtime:** `seed_from_project` + `browser_get_text` + `set_variable` + item ForEach → mapa de run; interpolação `{nome}` em `log`, `file_write`, `set_variable.value`, operandos If.
+**Runtime:** `seed_from_project` + `browser_get_text` + `set_variable` + item ForEach → mapa de run; interpolação `{nome}` em `log`, `file_write`, `browser_navigate.url`, `browser_fill`, `set_variable.value`, operandos If.
 
 **Ainda fora do escopo:** validação estática de `{refs}` desconhecidas; ramo **On error** dedicado no grafo. **Composição / subfluxos:** [slice 9](mvp/fase-mvp-slice9-flow-compose.md) (`run_flow`, `subflows`, escopo `isolated`).
 
@@ -372,6 +372,7 @@ Listas em run são **JSON array** em string (mesmo formato que listas em Project
 | **Model** | `crates/hoblio-model/src/error_handling.rs` |
 | **Runtime** | `execute_action_with_policy` em `exec.rs` |
 | **Exemplo** | `examples/resilience-demo` |
+| **Telas opcionais** | `continue` após falha de seletor + seeds vazios + `If` — padrão em `examples/login-eproc` (§4.5.1) |
 
 ---
 
@@ -403,6 +404,20 @@ Detalhe de produto e limites remanescentes: [fase-mvp-slice9-flow-compose.md](mv
 - **Subfluxo → subfluxo:** irmãos no mesmo `flow.json` resolvem via mapa `subflows` (não só no grafo da entry).
 - **Paths:** `resolve_project_flow_path` — caminho relativo canonicalizado **dentro** da pasta do projeto (`../` e absolutos rejeitados).
 - **CLI `run`:** com `project_root`, chama `validate_project_composition` antes de executar (ciclos / profundidade 16), alinhado ao Studio.
+
+### 4.5.1 Exemplo `login-eproc` (browser eproc + HML/PRD)
+
+Referência para login web com telas **opcionais** (OTP, perfil) e escolha de ambiente no início do run.
+
+| Peça | Padrão |
+|------|--------|
+| **Subfluxo `pick_environment`** | `show_get_user_input` (digite `hml` ou `prd`) → `If` (`{EprocEnvChoice}` **contains** `prd`) → ramos com `set_variable` (`EprocUrl`, `EprocUser`) → `End`. A entry chama **`run_flow`** (`flow_id: pick_environment`, `variable_scope: inherit`, sem browser) **antes** do primeiro `browser_navigate`. |
+| **Navegação** | Um único `browser_navigate` com `url: "{EprocUrl}"` — campo `url` aceita `{variavel}` (runtime: `crates/hoblio-runtime/src/actions.rs`). |
+| **Credenciais** | Subfluxo `credentials_input`: `browser_fill` em `#username` com `{EprocUser}`; demais passos iguais entre bases. |
+| **OTP / painel incertos** | `browser_get_text` no seletor da tela + `error_handling.on_failure: continue` + `timeout_ms` curto; **`If`** com `contains` no texto lido. Seeds vazios em **Project variables** (`BrowserText1`, …) para o `If` não quebrar quando o get falha (variável continua `""`). Opcional: `set_variable` vazio **antes** do probe para não reutilizar valor de passagem anterior (vários nós podem escrever o mesmo nome — § **Variáveis no Studio**). |
+| **Outros subfluxos** | `credentials_input`, `otp_input` (`share_browser: true` onde há DOM). |
+
+**Save / Validate:** cada nó do grafo (entry ou subfluxo) deve ser **alcançável a partir do Start**; nó solto no canvas → `node '…' is unreachable from start`.
 
 ---
 
@@ -475,7 +490,7 @@ Rodadas documentadas em [avaliacao/relatorios/2026-10-26/](avaliacao/relatorios/
 |--------|---------|
 | **Biblioteca** | `chromiumoxide` **0.9** (CDP compatível com Chrome/Edge recentes) |
 | **Executável** | Detecção automática de `chrome.exe` / `msedge.exe` (`crates/hoblio-runtime/src/chromium_exe.rs`) — caminhos padrão Windows, como RPA desktop (ex. Power Automate). Override: `HOBLIO_CHROME_PATH` |
-| **Variáveis** | Seed em `flow.json` → `variables` (**Project variables**). Run: `browser_get_text`, **`set_variable`**, ForEach, `{nome}` em textos. Studio: **Flow variables**, defaults `BrowserText1` / `Var1`, paleta **Set variable** |
+| **Variáveis** | Seed em `flow.json` → `variables` (**Project variables**). Run: `browser_get_text`, **`set_variable`**, ForEach, `{nome}` em **`browser_navigate.url`**, **`browser_fill`**, textos de log/arquivo. Studio: **Flow variables**, defaults `BrowserText1` / `Var1`, paleta **Set variable** |
 | **Caminhos `file_write`** | Relativos à **pasta do projeto** (`run` / Studio passam `projectDir`); ex.: `output/example-fetch.txt` |
 | **Demo** | `examples/browser-demo-flow` — `example.com` usa `body p` (o site não expõe mais `<h1>`) |
 | **`setup-dev.bat`** | Pré-check de espaço no C:, MSVC com carga C++, `cargo test`, `validate` nos exemplos; informa qual Chromium foi detectado; `--full` roda demos browser se houver Chrome/Edge |
@@ -535,7 +550,7 @@ cargo run -p hoblio-cli -- run examples/flow-compose-demo
 
 Logs JSONL por execução (CLI `--jsonl`): arquivos sob `.hoblio/` conforme `hoblio-log`.
 
-Interpolação `{variavel}`: seeds em **`flow.json` → `variables`**, valores escritos por **`browser_get_text`**, **`set_variable`**, e **item de ForEach** durante o run.
+Interpolação `{variavel}`: seeds em **`flow.json` → `variables`**, valores escritos por **`browser_get_text`**, **`set_variable`**, e **item de ForEach** durante o run; resolução em **`browser_navigate.url`**, **`browser_fill`**, **`set_variable.value`**, operandos de **If**, etc. (`hoblio-runtime` → `variables::interpolate`).
 
 ---
 
@@ -573,7 +588,7 @@ meu-fluxo/
 
 Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. Controle de fluxo: [slice 5–8](mvp/fase-mvp-slice5-flow-control.md); variáveis PAD-style: §4 **Variáveis no Studio**.
 
-**Exemplos por entrega:** `flow-control-demo` · `variables-loops-demo` · `files-lists-demo` · `resilience-demo` · `browser-demo-flow` · `flow-compose-demo` / `flow-compose-isolated` / `flow-compose-subflow` · `login-eproc` (eproc HML + subfluxos embutidos).
+**Exemplos por entrega:** `flow-control-demo` · `variables-loops-demo` · `files-lists-demo` · `resilience-demo` · `browser-demo-flow` · `flow-compose-demo` / `flow-compose-isolated` / `flow-compose-subflow` · `login-eproc` (HML/PRD via subfluxo `pick_environment`, login/OTP, §4.5.1).
 
 ---
 
