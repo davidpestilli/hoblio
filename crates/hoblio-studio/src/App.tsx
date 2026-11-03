@@ -197,6 +197,10 @@ export default function App() {
     return editorDigest(viewProject, activeEditorKey) !== saved;
   }, [activeEditorKey, editor, project, variables, viewProjectForEditorKey]);
 
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  hasUnsavedChangesRef.current = hasUnsavedChanges;
+  const forceCloseRef = useRef(false);
+
   const dirtyFlowPaths = useMemo(() => {
     const dirty = new Set<string>();
     const viewProject =
@@ -814,10 +818,15 @@ export default function App() {
   }, [editor, restoreDocUndo]);
 
   useEffect(() => {
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
-    void getCurrentWindow()
-      .onCloseRequested(async (event) => {
-        if (!hasUnsavedChanges()) {
+
+    void (async () => {
+      const fn = await getCurrentWindow().onCloseRequested(async (event) => {
+        if (forceCloseRef.current) {
+          return;
+        }
+        if (!hasUnsavedChangesRef.current()) {
           return;
         }
         event.preventDefault();
@@ -826,16 +835,22 @@ export default function App() {
           { title: "Unsaved changes", kind: "warning" },
         );
         if (proceed) {
+          forceCloseRef.current = true;
           await getCurrentWindow().destroy();
         }
-      })
-      .then((fn) => {
-        unlisten = fn;
       });
+      if (cancelled) {
+        fn();
+      } else {
+        unlisten = fn;
+      }
+    })();
+
     return () => {
+      cancelled = true;
       unlisten?.();
     };
-  }, [hasUnsavedChanges]);
+  }, []);
 
   const flowNodes = useMemo(
     () => editor.nodes.map((n) => n.data.flowNode),

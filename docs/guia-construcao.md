@@ -253,6 +253,16 @@ O runtime só usa `from` / `to` e a porta lógica (`main`, `then`, `else`, …).
 
 Exemplo de composição com subfluxos embutidos: `examples/login-eproc` (entry + `credentials_input` + `otp_input`).
 
+### Studio — fechar janela com alterações não salvas (nov/2026)
+
+Complementa **M6** (§4.7): ao fechar o app com diagrama “dirty”, um diálogo **Unsaved changes** pergunta se fecha mesmo assim.
+
+| Peça | Mudança |
+|------|---------|
+| `App.tsx` → `onCloseRequested` | Registro **uma vez** (`useEffect` com deps `[]`); estado lido via `hasUnsavedChangesRef` — re-registrar a cada edição no canvas deixava **vários** handlers (race no `unlisten` assíncrono) e **vários diálogos** seguidos ao fechar. |
+| `App.tsx` → `forceCloseRef` | Depois que o usuário confirma, `destroy()` dispara de novo `onCloseRequested`; a flag ignora a checagem na segunda passagem — antes o app **não fechava** e o aviso reaparecia em loop. |
+| Padrão `cancelled` | Igual ao listener `hoblio-run-event`: se o efeito desmonta antes do `await onCloseRequested`, o handler recém-registrado é removido na hora. |
+
 ### Variáveis no Studio (PAD-style)
 
 Dois papéis, como no Power Automate for desktop:
@@ -426,7 +436,7 @@ Rodada **APROVADO COM RESSALVAS** → correções abaixo fecham os itens **Alto*
 | **M3** | Studio | Troca de aba no **mesmo arquivo** sem diálogo; baseline `markSaved` ao trocar aba; menos falso “dirty” |
 | **M4** | Studio | **Run** chama validate antes de gravar o owner no disco |
 | **M5** | Studio | Pilha `docUndoRef` — Ctrl+Z restaura documento owner após rename/delete de subfluxo |
-| **M6** | Studio | `onCloseRequested` — confirma fechar com alterações não salvas |
+| **M6** | Studio | `onCloseRequested` — confirma fechar com alterações não salvas; correção listener único + `forceCloseRef` (§ Editor — fechar janela, nov/2026) |
 | **B3** | Model | `validate_graph`: ids inválidos em `subflows` (ex. `../evil`) rejeitados |
 | **B4** | Studio | Botão **Rename** desabilitado quando o id alvo já existe |
 | **B5** | Studio | Contraste das abas de fluxo (`styles.css`) |
