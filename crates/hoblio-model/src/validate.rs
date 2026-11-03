@@ -48,8 +48,6 @@ pub enum ValidationError {
     InvalidListVariable(NodeId, String),
     #[error("node `{0}` uses invalid variable name `{1}`")]
     InvalidVariableName(NodeId, String),
-    #[error("variable `{0}` is produced by both `{1}` and `{2}`")]
-    DuplicateVariableProducer(String, NodeId, NodeId),
     #[error("node `{0}` set_variable requires a non-empty variable name")]
     SetVariableNameMissing(NodeId),
     #[error("node `{0}` retry_count {1} exceeds maximum allowed")]
@@ -230,8 +228,6 @@ fn is_valid_variable_name(name: &str) -> bool {
 }
 
 fn validate_variable_producers(graph: &FlowGraph) -> Result<(), ValidationError> {
-    let mut producers: HashMap<String, NodeId> = HashMap::new();
-
     for node in &graph.nodes {
         if let Some(action) = &node.action {
             if matches!(action, ActionKind::SetVariable { variable, .. } if variable.trim().is_empty())
@@ -276,14 +272,6 @@ fn validate_variable_producers(graph: &FlowGraph) -> Result<(), ValidationError>
                         name.to_string(),
                     ));
                 }
-                if let Some(prev) = producers.get(name) {
-                    return Err(ValidationError::DuplicateVariableProducer(
-                        name.to_string(),
-                        prev.clone(),
-                        node.id.clone(),
-                    ));
-                }
-                producers.insert(name.to_string(), node.id.clone());
             }
         }
 
@@ -298,14 +286,6 @@ fn validate_variable_producers(graph: &FlowGraph) -> Result<(), ValidationError>
                     cfg.item_variable.clone(),
                 ));
             }
-            if let Some(prev) = producers.get(name) {
-                return Err(ValidationError::DuplicateVariableProducer(
-                    name.to_string(),
-                    prev.clone(),
-                    node.id.clone(),
-                ));
-            }
-            producers.insert(name.to_string(), node.id.clone());
         }
         if node.kind == NodeKind::Repeat {
             let Some(ControlKind::Repeat(cfg)) = &node.control else {
@@ -318,14 +298,6 @@ fn validate_variable_producers(graph: &FlowGraph) -> Result<(), ValidationError>
                     cfg.index_variable.clone(),
                 ));
             }
-            if let Some(prev) = producers.get(name) {
-                return Err(ValidationError::DuplicateVariableProducer(
-                    name.to_string(),
-                    prev.clone(),
-                    node.id.clone(),
-                ));
-            }
-            producers.insert(name.to_string(), node.id.clone());
         }
     }
 
@@ -693,5 +665,85 @@ mod tests {
             Err(ValidationError::MissingOutgoingPort(id, port))
                 if id == "cond" && port == "else"
         ));
+    }
+
+    #[test]
+    fn multiple_nodes_may_write_same_variable_name() {
+        let g = FlowGraph {
+            start: "start".into(),
+            nodes: vec![
+                Node {
+                    id: "start".into(),
+                    kind: NodeKind::Start,
+                    label: None,
+                    action: None,
+                    control: None,
+                    ui: None,
+                    error_handling: None,
+                },
+                Node {
+                    id: "clear".into(),
+                    kind: NodeKind::Action,
+                    label: None,
+                    action: Some(ActionKind::SetVariable {
+                        variable: "flag".into(),
+                        value: String::new(),
+                    }),
+                    control: None,
+                    ui: None,
+                    error_handling: None,
+                },
+                Node {
+                    id: "read".into(),
+                    kind: NodeKind::Action,
+                    label: None,
+                    action: Some(ActionKind::BrowserGetText {
+                        selector: "h1".into(),
+                        timeout_ms: None,
+                        variable: Some("flag".into()),
+                    }),
+                    control: None,
+                    ui: None,
+                    error_handling: None,
+                },
+                Node {
+                    id: "end".into(),
+                    kind: NodeKind::End,
+                    label: None,
+                    action: None,
+                    control: None,
+                    ui: None,
+                    error_handling: None,
+                },
+            ],
+            edges: vec![
+                Edge {
+                    id: None,
+                    from: "start".into(),
+                    to: "clear".into(),
+                    label: None,
+                    port: None,
+                    ui: None,
+                },
+                Edge {
+                    id: None,
+                    from: "clear".into(),
+                    to: "read".into(),
+                    label: None,
+                    port: None,
+                    ui: None,
+                },
+                Edge {
+                    id: None,
+                    from: "read".into(),
+                    to: "end".into(),
+                    label: None,
+                    port: None,
+                    ui: None,
+                },
+            ],
+            subflows: None,
+        };
+        validate_graph(&g).expect("PAD-style rewrites to the same variable are allowed");
     }
 }

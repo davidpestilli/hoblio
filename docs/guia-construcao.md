@@ -270,7 +270,9 @@ Dois papéis, como no Power Automate for desktop:
 | Papel | Onde | Disco / run |
 |--------|------|-------------|
 | **Valores iniciais (seed)** | Painel **Project variables** (canvas sem seleção) | `flow.json` → `variables` |
-| **Variáveis produzidas no fluxo** | Campo **Output variable** nos nós; índice **Flow variables** | Campos no nó (`browser_get_text.variable`, `set_variable.variable`, `for_each.item_variable`); valor preenchido na **execução** |
+| **Variáveis de run (escritas no fluxo)** | Campo **Output variable** nos nós; índice **Flow variables** | Campos no nó (`browser_get_text.variable`, `set_variable.variable`, `for_each.item_variable`); valor atualizado na **execução** |
+
+Como no PAD: **vários nós podem usar o mesmo nome** — na primeira passagem que executa o nó a variável passa a existir (ou é sobrescrita); passagens seguintes **alteram** o valor. A ordem depende do caminho (If, loops). **Project variables** só definem o estado **inicial** do run.
 
 Sem nó selecionado, o painel direito mostra **Flow variables** (índice somente leitura, link para o nó produtor) e **Project variables** abaixo.
 
@@ -291,7 +293,7 @@ Sem nó selecionado, o painel direito mostra **Flow variables** (índice somente
 
 - Ação **`set_variable`**: `{ "type": "set_variable", "variable": "nome", "value": "texto ou {outra}" }`.
 - **`ActionKind::produced_variables()`** — metadado “Variables produced” (`browser_get_text`, `set_variable`).
-- **`validate_project`**: nome inválido, `set_variable` sem nome, **produtor duplicado** (inclui `item_variable` do For each).
+- **`validate_project`**: nome inválido, `set_variable` / `file_read` / `show_get_user_input` sem nome de variável, `for_each` / `repeat` com `item_variable` / `index_variable` inválidos. **Não** exige nomes únicos por nó (várias ações podem escrever na mesma variável).
 
 **Runtime:** `seed_from_project` + `browser_get_text` + `set_variable` + item ForEach → mapa de run; interpolação `{nome}` em `log`, `file_write`, `set_variable.value`, operandos If.
 
@@ -318,7 +320,7 @@ cargo build -p hoblio-studio
 
 | Peça | Função |
 |------|--------|
-| **`validate_project`** | Grafo + listas ForEach + produtores de variável (duplicados / nomes inválidos) + next/exit no corpo |
+| **`validate_project`** | Grafo + listas ForEach + nomes de variável inválidos nos nós que escrevem + next/exit no corpo |
 | **`examples/flow-control-demo`** | If + ForEach + variáveis `flag` / `items` |
 | **`scripts/eval-flow-control.ps1`** | Harness Grok/CI — esperado **24 PASS, 0 FAIL** (inclui validate de cada `examples/*` com manifest) |
 | **Docs de avaliação** | [eval-grok-flow-control.md](avaliacao/protocolos/eval-grok-flow-control.md), [eval-grok-retest-priorities.md](avaliacao/protocolos/eval-grok-retest-priorities.md) |

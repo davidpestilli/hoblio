@@ -13,7 +13,8 @@ export function FlowVariablesOverview({ nodes, onSelectNode }: Props) {
     <section className="var-section flow-vars-section">
       <h4>Flow variables</h4>
       <p className="hint">
-        Names assigned during the run by actions and loops (read-only index).
+        Names written during the run (read-only index). The same name may appear on several nodes — last
+        executed writer wins (PAD-style).
       </p>
       {producers.length === 0 ? (
         <p className="var-empty">No producers yet — use BrowserGetText or Set variable.</p>
