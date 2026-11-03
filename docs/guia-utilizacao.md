@@ -27,6 +27,7 @@ npm run tauri dev
 1. **Open** — selecione uma **pasta** de projeto (ex.: `examples\flow-control-demo`). Se houver alterações não salvas, o app pede confirmação antes de trocar de projeto.
 2. No canvas, use **Edição** (barra acima do diagrama):
    - **Paleta** (esquerda): **Start node** e **End node** (grupo **Utilitários**), ações, **If**, loops (**For each**, **While**, **Repeat**, **Next loop**, **Exit loop**), **Run flow** / **New subflow**.
+   - **Conectores:** em nós de ação, cada lado (topo/direita/base/esquerda) é **um** ponto — serve para **ligar de** ou **ligar em**; **If** / loops mantêm saídas coloridas à direita (`then` / `body`) e embaixo (`else` / `after`).
    - **Conexões:** arraste de conector de saída para entrada; nós If/ForEach usam portas **then/else** ou **body/after** (rótulos no nó).
    - Conexões inválidas (self-loop, ligar em Start, sair de End) mostram mensagem na barra de status.
    - **Selecionar** nó ou aresta; **Delete** / **Backspace** remove (Start não apaga).

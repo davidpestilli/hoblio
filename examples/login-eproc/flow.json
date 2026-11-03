@@ -2,102 +2,116 @@
   "edges": [
     {
       "from": "start",
-      "to": "action_mvpsvxrs",
+      "to": "action_mvzu4odw",
       "ui": {
         "targetHandle": "left"
       }
     },
     {
-      "from": "action_mvpsz0gk",
-      "to": "action_mvpsylyd",
+      "from": "action_mvzu4odw",
+      "to": "action_mvzu49l8",
       "ui": {
         "targetHandle": "left"
       }
     },
     {
-      "from": "action_mvpsylyd",
-      "to": "action_mvpt3683",
+      "from": "action_s2i6xjei",
+      "to": "action_mvzudsb7",
       "ui": {
         "targetHandle": "left"
       }
     },
     {
-      "from": "action_mvqgcocr",
-      "to": "action_mvpt5z9e",
-      "ui": {
-        "targetHandle": "left"
-      }
-    },
-    {
-      "from": "action_mvqgcfsp",
-      "to": "action_mvqgdeby",
-      "ui": {
-        "targetHandle": "left"
-      }
-    },
-    {
-      "from": "action_mvqgdeby",
-      "to": "action_mvqgcocr",
-      "ui": {
-        "targetHandle": "left"
-      }
-    },
-    {
-      "from": "action_mvqgtv7s",
-      "to": "if_mvqgu2sc",
-      "ui": {
-        "targetHandle": "left"
-      }
-    },
-    {
-      "from": "if_mvqgu2sc",
-      "port": "then",
-      "to": "action_mvqgy75i",
-      "ui": {
-        "targetHandle": "left"
-      }
-    },
-    {
-      "from": "action_mvqgzv1t",
-      "to": "end",
-      "ui": {
-        "targetHandle": "left"
-      }
-    },
-    {
-      "from": "action_mvpsvxrs",
-      "to": "action_mvpsz0gk",
-      "ui": {
-        "targetHandle": "left"
-      }
-    },
-    {
-      "from": "action_mvpt3683",
-      "to": "action_mvqgtv7s",
-      "ui": {
-        "targetHandle": "left"
-      }
-    },
-    {
-      "from": "if_mvqgu2sc",
+      "from": "if_mvzwh8br_8bng",
       "port": "else",
-      "to": "action_mvqgcfsp",
+      "to": "action_mvqgy75i",
       "ui": {
         "targetHandle": "left"
       }
     },
     {
-      "from": "action_mvpt5z9e",
-      "to": "action_mvqgy75i",
+      "from": "if_mvzwh8br_8bng",
+      "port": "then",
+      "to": "action_mvsnv0r6",
       "ui": {
         "targetHandle": "left"
       }
     },
     {
       "from": "action_mvqgy75i",
-      "to": "action_mvqgzv1t",
+      "to": "action_mvsnv0r6",
+      "ui": {
+        "targetHandle": "bottom"
+      }
+    },
+    {
+      "from": "if_mvqgu2sc",
+      "port": "else",
+      "to": "action_mvzwoqkh",
+      "ui": {
+        "targetHandle": "top"
+      }
+    },
+    {
+      "from": "action_mvzwoqkh",
+      "to": "if_mvzwh8br_8bng",
+      "ui": {
+        "sourceHandle": "bottom",
+        "targetHandle": "top"
+      }
+    },
+    {
+      "from": "action_mvzu49l8",
+      "to": "if_mvqgu2sc",
+      "ui": {
+        "targetHandle": "top"
+      }
+    },
+    {
+      "from": "if_mvqgu2sc",
+      "port": "then",
+      "to": "action_s2i6xjei",
       "ui": {
         "targetHandle": "left"
+      }
+    },
+    {
+      "from": "action_mvsnv0r6",
+      "to": "end",
+      "ui": {
+        "targetHandle": "top"
+      }
+    },
+    {
+      "from": "action_mvzudsb7",
+      "to": "if_mvzu74tg_nz5i",
+      "ui": {
+        "sourceHandle": "bottom",
+        "targetHandle": "top"
+      }
+    },
+    {
+      "from": "if_mvzu74tg_nz5i",
+      "port": "then",
+      "to": "action_mvzsy16v",
+      "ui": {
+        "targetHandle": "left"
+      }
+    },
+    {
+      "from": "if_mvzu74tg_nz5i",
+      "port": "else",
+      "to": "action_mvzwoqkh",
+      "ui": {
+        "targetHandle": "top"
+      }
+    },
+    {
+      "from": "action_mvzsy16v",
+      "to": "action_mvzwoqkh",
+      "ui": {
+        "sourceHandle": "bottom",
+        "targetHandle": "top"
       }
     }
   ],
@@ -107,8 +121,8 @@
       "kind": "start",
       "label": "Start",
       "ui": {
-        "x": -220.0,
-        "y": -210.0
+        "x": -520.0,
+        "y": -310.0
       }
     },
     {
@@ -116,169 +130,158 @@
       "kind": "end",
       "label": "End",
       "ui": {
-        "x": 1390.0,
-        "y": -12.5
-      }
-    },
-    {
-      "action": {
-        "type": "browser_navigate",
-        "url": "https://eproc1g.tjsp.jus.br/eproc/index.php",
-        "wait_ms": 2000
-      },
-      "id": "action_mvpsvxrs",
-      "kind": "action",
-      "label": "browser navigate",
-      "ui": {
-        "x": -20.0,
-        "y": -210.0
-      }
-    },
-    {
-      "action": {
-        "selector": "h1",
-        "text": "",
-        "type": "browser_fill"
-      },
-      "id": "action_mvpsylyd",
-      "kind": "action",
-      "label": "browser fill",
-      "ui": {
-        "x": 440.0,
-        "y": -210.0
-      }
-    },
-    {
-      "action": {
-        "selector": "#username",
-        "text": "M372152",
-        "type": "browser_fill"
-      },
-      "id": "action_mvpsz0gk",
-      "kind": "action",
-      "label": "browser fill",
-      "ui": {
-        "x": 230.0,
-        "y": -210.0
-      }
-    },
-    {
-      "action": {
-        "selector": "#kc-login",
-        "type": "browser_click",
-        "wait_for_navigation": true
-      },
-      "id": "action_mvpt3683",
-      "kind": "action",
-      "label": "browser click",
-      "ui": {
-        "x": 660.0,
-        "y": -210.0
-      }
-    },
-    {
-      "action": {
-        "selector": "#mostrar-btn-padrão > span",
-        "type": "browser_get_text",
-        "variable": "BrowserText2"
-      },
-      "id": "action_mvpt5z9e",
-      "kind": "action",
-      "label": "browser get text",
-      "ui": {
-        "x": 600.0,
-        "y": 150.0
-      }
-    },
-    {
-      "action": {
-        "button_pressed_variable": "ButtonPressed1",
-        "input_kind": "single_line",
-        "message": "Digite um valor",
-        "title": "Novo",
-        "topmost": true,
-        "type": "show_get_user_input",
-        "user_input_variable": "UserInput1"
-      },
-      "id": "action_mvqgcfsp",
-      "kind": "action",
-      "label": "show get user input",
-      "ui": {
-        "x": -120.0,
-        "y": 150.0
-      }
-    },
-    {
-      "action": {
-        "selector": "#kc-login",
-        "type": "browser_click",
-        "wait_for_navigation": false
-      },
-      "id": "action_mvqgcocr",
-      "kind": "action",
-      "label": "browser click",
-      "ui": {
-        "x": 360.0,
-        "y": 150.0
-      }
-    },
-    {
-      "action": {
-        "selector": "#otp",
-        "text": "{UserInput1}",
-        "type": "browser_fill"
-      },
-      "id": "action_mvqgdeby",
-      "kind": "action",
-      "label": "browser fill",
-      "ui": {
-        "x": 120.0,
-        "y": 150.0
-      }
-    },
-    {
-      "action": {
-        "selector": "#kc-otp-login-form > div:nth-child(1) > div:nth-child(1) > label",
-        "type": "browser_get_text",
-        "variable": "BrowserText1"
-      },
-      "id": "action_mvqgtv7s",
-      "kind": "action",
-      "label": "browser get text",
-      "ui": {
-        "x": 880.0,
-        "y": -210.0
+        "x": 100.0,
+        "y": 600.0
       }
     },
     {
       "control": {
         "ignore_case": true,
         "left": "{BrowserText1}",
-        "operator": "eq",
-        "right": "Seleção de perfil",
+        "operator": "contains",
+        "right": "acesso",
         "type": "if"
       },
       "id": "if_mvqgu2sc",
       "kind": "if",
-      "label": "If",
+      "label": "Tela de login?",
       "ui": {
-        "x": -240.0,
-        "y": -30.0
+        "x": -520.0,
+        "y": -170.0
       }
     },
     {
       "action": {
-        "selector": "#tr0",
+        "selector": "#tr1",
         "type": "browser_click",
         "wait_for_navigation": true,
         "wait_selector_after": "#btn-home > i"
       },
       "id": "action_mvqgy75i",
       "kind": "action",
-      "label": "browser click",
+      "label": "Seleciona o usuário",
       "ui": {
-        "x": 910.0,
-        "y": -12.5
+        "x": -280.0,
+        "y": 600.0
+      }
+    },
+    {
+      "action": {
+        "text": "{BrowserText2}",
+        "title": "Hoblio",
+        "type": "show_message"
+      },
+      "id": "action_mvsnv0r6",
+      "kind": "action",
+      "label": "show message",
+      "ui": {
+        "x": -120.0,
+        "y": 418.0
+      }
+    },
+    {
+      "action": {
+        "flow_id": "otp_input",
+        "share_browser": true,
+        "type": "run_flow",
+        "variable_scope": "inherit"
+      },
+      "id": "action_mvzsy16v",
+      "kind": "action",
+      "label": "insere_otp",
+      "ui": {
+        "x": 270.0,
+        "y": 0.0
+      }
+    },
+    {
+      "action": {
+        "selector": "#kc-form-buttons > div.my-3.border-bottom.d-flex > div.w-100.text-left.font-weight-light",
+        "type": "browser_get_text",
+        "variable": "BrowserText1"
+      },
+      "id": "action_mvzu49l8",
+      "kind": "action",
+      "label": "Verifica para qual tela foi",
+      "ui": {
+        "x": -60.0,
+        "y": -310.0
+      }
+    },
+    {
+      "action": {
+        "flow_id": "credentials_input",
+        "share_browser": true,
+        "type": "run_flow",
+        "variable_scope": "inherit"
+      },
+      "id": "action_s2i6xjei",
+      "kind": "action",
+      "label": "Insere login e senha",
+      "ui": {
+        "x": -250.0,
+        "y": -152.5
+      }
+    },
+    {
+      "action": {
+        "type": "browser_navigate",
+        "url": "https://eproc-1g-sp-hml.tjsp.jus.br/",
+        "wait_ms": 2000
+      },
+      "id": "action_mvzu4odw",
+      "kind": "action",
+      "label": "Vai para eproc.hml",
+      "ui": {
+        "x": -299.0,
+        "y": -310.0
+      }
+    },
+    {
+      "control": {
+        "ignore_case": true,
+        "left": "{BrowserText2}",
+        "operator": "eq",
+        "right": "Seleção de perfil",
+        "type": "if"
+      },
+      "id": "if_mvzu74tg_nz5i",
+      "kind": "if",
+      "label": "Tela de OTP?",
+      "ui": {
+        "x": -1.0,
+        "y": -17.5
+      }
+    },
+    {
+      "action": {
+        "selector": "h1",
+        "timeout_ms": 10000,
+        "type": "browser_get_text",
+        "variable": "BrowserText2"
+      },
+      "id": "action_mvzudsb7",
+      "kind": "action",
+      "label": "Verifica para qual tela foi",
+      "ui": {
+        "x": -20.0,
+        "y": -152.5
+      }
+    },
+    {
+      "control": {
+        "ignore_case": true,
+        "left": "{BrowserText3}",
+        "operator": "contains",
+        "right": "Painel",
+        "type": "if"
+      },
+      "id": "if_mvzwh8br_8bng",
+      "kind": "if",
+      "label": "Tela inicial?",
+      "ui": {
+        "x": -520.0,
+        "y": 400.0
       }
     },
     {
@@ -288,14 +291,214 @@
         "type": "browser_get_text",
         "variable": "BrowserText3"
       },
-      "id": "action_mvqgzv1t",
+      "id": "action_mvzwoqkh",
       "kind": "action",
-      "label": "browser get text",
+      "label": "Verifica para qual tela foi",
       "ui": {
-        "x": 1150.0,
-        "y": -12.5
+        "x": -539.0,
+        "y": 210.0
       }
     }
   ],
-  "start": "start"
+  "start": "start",
+  "subflows": {
+    "credentials_input": {
+      "edges": [
+        {
+          "from": "action_mvzsjpb3",
+          "to": "action_8s5e8dyl",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "action_mvzsjpb4",
+          "to": "action_mvzsjpb3",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "action_8s5e8dyl",
+          "to": "end_mvzsjw3z",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "start",
+          "to": "action_mvzsjpb4",
+          "ui": {
+            "targetHandle": "left"
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "action": {
+            "selector": "#password",
+            "text": "Davidtj150832!!!",
+            "timeout_ms": 1000,
+            "type": "browser_fill"
+          },
+          "id": "action_mvzsjpb3",
+          "kind": "action",
+          "label": "Preenche senha",
+          "ui": {
+            "x": 440.0,
+            "y": -170.0
+          }
+        },
+        {
+          "action": {
+            "selector": "#username",
+            "text": "WS-DSDP",
+            "timeout_ms": 1000,
+            "type": "browser_fill"
+          },
+          "id": "action_mvzsjpb4",
+          "kind": "action",
+          "label": "Preenche usuário",
+          "ui": {
+            "x": 230.0,
+            "y": -170.0
+          }
+        },
+        {
+          "action": {
+            "selector": "#kc-login",
+            "type": "browser_click",
+            "wait_for_navigation": true
+          },
+          "id": "action_8s5e8dyl",
+          "kind": "action",
+          "label": "Clica no login",
+          "ui": {
+            "x": 640.0,
+            "y": -170.0
+          }
+        },
+        {
+          "id": "start",
+          "kind": "start",
+          "label": "Start",
+          "ui": {
+            "x": -20.0,
+            "y": -170.0
+          }
+        },
+        {
+          "id": "end_mvzsjw3z",
+          "kind": "end",
+          "label": "End",
+          "ui": {
+            "x": 880.0,
+            "y": -170.0
+          }
+        }
+      ],
+      "start": "start",
+      "variables": {}
+    },
+    "otp_input": {
+      "edges": [
+        {
+          "from": "action_mvzsxj65",
+          "to": "action_friiyyj5",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "start",
+          "to": "action_mvzsxj64",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "action_friiyyj5",
+          "to": "end_mvzsxn44",
+          "ui": {
+            "targetHandle": "left"
+          }
+        },
+        {
+          "from": "action_mvzsxj64",
+          "to": "action_mvzsxj65",
+          "ui": {
+            "targetHandle": "left"
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "action": {
+            "button_pressed_variable": "ButtonPressed1",
+            "input_kind": "single_line",
+            "message": "Digite um valor",
+            "title": "Novo",
+            "topmost": true,
+            "type": "show_get_user_input",
+            "user_input_variable": "UserInput1"
+          },
+          "id": "action_mvzsxj64",
+          "kind": "action",
+          "label": "Pede OTP",
+          "ui": {
+            "x": 0.0,
+            "y": 190.0
+          }
+        },
+        {
+          "action": {
+            "selector": "#kc-login",
+            "type": "browser_click",
+            "wait_for_navigation": false
+          },
+          "id": "action_friiyyj5",
+          "kind": "action",
+          "label": "Clica para avançar",
+          "ui": {
+            "x": 460.0,
+            "y": 190.0
+          }
+        },
+        {
+          "action": {
+            "selector": "#otp",
+            "text": "{UserInput1}",
+            "type": "browser_fill"
+          },
+          "id": "action_mvzsxj65",
+          "kind": "action",
+          "label": "Preenche OTP",
+          "ui": {
+            "x": 230.0,
+            "y": 190.0
+          }
+        },
+        {
+          "id": "start",
+          "kind": "start",
+          "label": "Start",
+          "ui": {
+            "x": -250.0,
+            "y": 190.0
+          }
+        },
+        {
+          "id": "end_mvzsxn44",
+          "kind": "end",
+          "label": "End",
+          "ui": {
+            "x": 720.0,
+            "y": 190.0
+          }
+        }
+      ],
+      "start": "start",
+      "variables": {}
+    }
+  }
 }

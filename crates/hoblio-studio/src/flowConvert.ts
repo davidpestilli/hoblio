@@ -6,7 +6,41 @@ import type { HoblioFlowEdge, HoblioNodeData } from "./flow/flowTypes";
 export type { HoblioNodeData };
 
 const MAIN_SOURCE_HANDLE = "right";
+/** Visual-only ids for main-flow outputs (runtime always uses port `main`). */
+export const MAIN_OUT_SOURCE_HANDLES = [
+  "right",
+  "top",
+  "bottom",
+  "left",
+  "out-top",
+  "out-bottom",
+] as const;
 const CONTROL_PORTS = new Set<EdgePort>(["then", "else", "body", "after"]);
+
+/** Maps legacy source handle ids from older Studio builds. */
+export function normalizeSourceHandleForCanvas(
+  value: string | undefined,
+): string | undefined {
+  if (value === "out-top") return "top";
+  if (value === "out-bottom") return "bottom";
+  return value;
+}
+
+export function isMainOutSourceHandle(value: string | undefined): boolean {
+  return (
+    value === "right" ||
+    value === "top" ||
+    value === "bottom" ||
+    value === "left" ||
+    value === "out-top" ||
+    value === "out-bottom"
+  );
+}
+
+/** Omit from persisted `ui.sourceHandle` when loading/saving (default layout side). */
+export function isDefaultMainSourceHandle(value: string | undefined): boolean {
+  return !value || value === MAIN_SOURCE_HANDLE;
+}
 
 function resolveEdgeId(edge: FlowEdge, index: number): string {
   return edge.id ?? `e-${edge.from}-${edge.to}-${index}`;
@@ -52,7 +86,9 @@ export function graphToFlow(graph: FlowGraph): { nodes: Node<HoblioNodeData>[]; 
     const id = resolveEdgeId(e, i);
     const port = e.port ?? (e.ui?.sourceHandle as EdgePort | undefined);
     const sourceNode = nodesById.get(e.from);
-    const sourceHandle = e.ui?.sourceHandle ?? defaultSourceHandle(sourceNode, port);
+    const sourceHandle =
+      normalizeSourceHandleForCanvas(e.ui?.sourceHandle) ??
+      defaultSourceHandle(sourceNode, port);
     return {
       id,
       type: "waypoint",
@@ -104,7 +140,7 @@ export function flowToGraph(
     const isControl = port && CONTROL_PORTS.has(port);
     const persistSourceHandle =
       normalizedHandle &&
-      normalizedHandle !== MAIN_SOURCE_HANDLE &&
+      !isDefaultMainSourceHandle(normalizedHandle) &&
       !(port && normalizedHandle === port);
     const ui =
       waypoints.length > 0 || targetHandle || persistSourceHandle

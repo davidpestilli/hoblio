@@ -241,6 +241,18 @@ O **React Flow 12** não traz copiar/colar de nós; **Ctrl+C** no canvas copiava
 
 Uso típico: selecionar trecho no fluxo principal → **Ctrl+C** → abrir aba do subfluxo → **Ctrl+V**. Ver também [guia de utilização §2](guia-utilizacao.md).
 
+### Studio — conectores por lado do nó (nov/2026)
+
+O runtime só usa `from` / `to` e a porta lógica (`main`, `then`, `else`, …). No canvas, **de qual lado** a aresta sai ou entra é metadado `edge.ui` (`sourceHandle`, `targetHandle`).
+
+| Peça | Comportamento |
+|------|----------------|
+| **`HoblioNode.tsx`** | Nós de **ação** (e demais com saída `main`): **topo, direita, base e esquerda** — um ponto visual por lado (target + source empilhados no mesmo lugar). **If** / loops: topo e esquerda só entram; direita e base entram e saem (`then`/`body` e `else`/`after`, cores semânticas). |
+| **`flowConvert.ts`** | Saídas `main` pelos ids `top`, `bottom`, `left`, `right` (legado `out-top` / `out-bottom` normalizado ao abrir). Só **`right`** omitido em `ui.sourceHandle` ao salvar (default). |
+| **Validação** | Continua **uma** aresta `main` por nó; trocar o lado da saída substitui a ligação existente. |
+
+Exemplo de composição com subfluxos embutidos: `examples/login-eproc` (entry + `credentials_input` + `otp_input`).
+
 ### Variáveis no Studio (PAD-style)
 
 Dois papéis, como no Power Automate for desktop:
@@ -549,7 +561,7 @@ meu-fluxo/
 
 Edição manual do `flow.json` continua possível; o **Studio** é o editor visual preferido. Controle de fluxo: [slice 5–8](mvp/fase-mvp-slice5-flow-control.md); variáveis PAD-style: §4 **Variáveis no Studio**.
 
-**Exemplos por entrega:** `flow-control-demo` · `variables-loops-demo` · `files-lists-demo` · `resilience-demo` · `browser-demo-flow` · `flow-compose-demo` / `flow-compose-isolated` / `flow-compose-subflow`.
+**Exemplos por entrega:** `flow-control-demo` · `variables-loops-demo` · `files-lists-demo` · `resilience-demo` · `browser-demo-flow` · `flow-compose-demo` / `flow-compose-isolated` / `flow-compose-subflow` · `login-eproc` (eproc HML + subfluxos embutidos).
 
 ---
 

@@ -747,3 +747,32 @@ button.danger-button {
 .hoblio-handle-source {
   background: #2563eb;
 }
+
+/* Target + source stacked on the same side (one visual dot). */
+.hoblio-handle-io {
+  background: #475569;
+}
+
+.hoblio-handle-layer-target {
+  z-index: 1;
+}
+
+.hoblio-handle-layer-source {
+  z-index: 2;
+}
+
+.hoblio-handle-source.port-then {
+  background: #16a34a;
+}
+
+.hoblio-handle-source.port-else {
+  background: #dc2626;
+}
+
+.hoblio-handle-source.port-body {
+  background: #2563eb;
+}
+
+.hoblio-handle-source.port-after {
+  background: #64748b;
+}

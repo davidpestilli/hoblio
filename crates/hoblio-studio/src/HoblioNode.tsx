@@ -1,33 +1,121 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import type { CSSProperties } from "react";
 import type { HoblioNodeData } from "./flowConvert";
 import { actionLabel, controlLabel } from "./model";
 
-const TARGET_SIDES = [
-  { id: "top", position: Position.Top },
-  { id: "right", position: Position.Right },
-  { id: "bottom", position: Position.Bottom },
-  { id: "left", position: Position.Left },
-] as const;
+type SideSpec = {
+  sideId: string;
+  position: Position;
+  sourceId?: string;
+  sourceClassName?: string;
+  target: boolean;
+  source: boolean;
+};
 
-type SourceHandle = { id: string; position: Position; className?: string };
+const CENTER_TOP_BOTTOM: CSSProperties = { left: "50%" };
+const CENTER_LEFT_RIGHT: CSSProperties = { top: "50%" };
 
-function sourceHandles(kind: string): SourceHandle[] {
+function centerStyle(position: Position): CSSProperties | undefined {
+  if (position === Position.Top || position === Position.Bottom) {
+    return CENTER_TOP_BOTTOM;
+  }
+  if (position === Position.Left || position === Position.Right) {
+    return CENTER_LEFT_RIGHT;
+  }
+  return undefined;
+}
+
+function sideSpecs(kind: string, showTarget: boolean, showSource: boolean): SideSpec[] {
+  const io = (sideId: string, position: Position): SideSpec => ({
+    sideId,
+    position,
+    sourceId: sideId,
+    target: showTarget,
+    source: showSource,
+  });
+
   switch (kind) {
     case "if":
       return [
-        { id: "then", position: Position.Right, className: "port-then" },
-        { id: "else", position: Position.Bottom, className: "port-else" },
+        { sideId: "top", position: Position.Top, target: showTarget, source: false },
+        { sideId: "left", position: Position.Left, target: showTarget, source: false },
+        {
+          sideId: "right",
+          position: Position.Right,
+          sourceId: "then",
+          sourceClassName: "port-then",
+          target: showTarget,
+          source: showSource,
+        },
+        {
+          sideId: "bottom",
+          position: Position.Bottom,
+          sourceId: "else",
+          sourceClassName: "port-else",
+          target: showTarget,
+          source: showSource,
+        },
       ];
     case "for_each":
     case "while_loop":
     case "repeat":
       return [
-        { id: "body", position: Position.Right, className: "port-body" },
-        { id: "after", position: Position.Bottom, className: "port-after" },
+        { sideId: "top", position: Position.Top, target: showTarget, source: false },
+        { sideId: "left", position: Position.Left, target: showTarget, source: false },
+        {
+          sideId: "right",
+          position: Position.Right,
+          sourceId: "body",
+          sourceClassName: "port-body",
+          target: showTarget,
+          source: showSource,
+        },
+        {
+          sideId: "bottom",
+          position: Position.Bottom,
+          sourceId: "after",
+          sourceClassName: "port-after",
+          target: showTarget,
+          source: showSource,
+        },
       ];
     default:
-      return [{ id: "right", position: Position.Right }];
+      return [
+        io("top", Position.Top),
+        io("right", Position.Right),
+        io("bottom", Position.Bottom),
+        io("left", Position.Left),
+      ];
   }
+}
+
+function SideHandles({ spec }: { spec: SideSpec }) {
+  const style = centerStyle(spec.position);
+
+  return (
+    <>
+      {spec.target ? (
+        <Handle
+          key={`target-${spec.sideId}`}
+          id={spec.sideId}
+          type="target"
+          position={spec.position}
+          style={style}
+          className="hoblio-handle hoblio-handle-io hoblio-handle-layer-target"
+        />
+      ) : null}
+      {spec.source ? (
+        <Handle
+          key={`source-${spec.sourceId}`}
+          id={spec.sourceId!}
+          type="source"
+          position={spec.position}
+          style={style}
+          className={`hoblio-handle hoblio-handle-io hoblio-handle-source hoblio-handle-layer-source ${spec.sourceClassName ?? ""}`}
+        />
+      ) : null}
+    </>
+  );
 }
 
 export function HoblioNode(props: NodeProps<Node<HoblioNodeData>>) {
@@ -48,34 +136,15 @@ export function HoblioNode(props: NodeProps<Node<HoblioNodeData>>) {
 
   const showTarget = n.kind !== "start";
   const showSource = n.kind !== "end";
-  const sources = sourceHandles(n.kind);
+  const sides = sideSpecs(n.kind, showTarget, showSource);
 
   return (
     <div
       className={`hoblio-node ${props.selected ? "selected" : ""} ${active ? "active" : ""} kind-${n.kind}`}
     >
-      {TARGET_SIDES.map(({ id, position }) =>
-        showTarget ? (
-          <Handle
-            key={`target-${id}`}
-            id={id}
-            type="target"
-            position={position}
-            className="hoblio-handle hoblio-handle-target"
-          />
-        ) : null,
-      )}
-      {showSource
-        ? sources.map(({ id, position, className }) => (
-            <Handle
-              key={`source-${id}`}
-              id={id}
-              type="source"
-              position={position}
-              className={`hoblio-handle hoblio-handle-source ${className ?? ""}`}
-            />
-          ))
-        : null}
+      {sides.map((spec) => (
+        <SideHandles key={spec.sideId} spec={spec} />
+      ))}
       <div className="hoblio-node-title">{n.label ?? n.id}</div>
       <div className="hoblio-node-sub">{subtitle}</div>
       {n.kind === "if" && (
